@@ -11,7 +11,9 @@ export function useRelay() {
   const { ownNodeId, relayConnected, addLiveMessage, updateLivePeers } = useMeshStore();
   const transportRef = useRef<RelayTransport | null>(null);
 
-  const relayUrl = 'ws://localhost:4800/mesh';
+  const relayUrl = (import.meta as any).env.DEV
+    ? 'ws://localhost:4800/mesh'
+    : 'wss://mesh-messenger.onrender.com/mesh';
 
   useEffect(() => {
     const transport = new RelayTransport(ownNodeId, relayUrl, {
