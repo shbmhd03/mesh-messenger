@@ -49,7 +49,6 @@ async function start() {
     status: 'ok',
     peers: peers.size,
     uptime: process.uptime(),
-    convexUrl: process.env.CONVEX_URL || 'not-configured',
   }));
 
   // ── Prekey Bundle API ──────────────────────────────────────────────────
