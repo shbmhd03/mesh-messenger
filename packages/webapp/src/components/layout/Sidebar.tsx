@@ -49,7 +49,7 @@ export function Sidebar() {
     <div className="sidebar">
       {/* Header */}
       <div className="sidebar-header">
-        <h1>Mesh</h1>
+        <h1>MeshQ</h1>
         <button
           className="icon-btn"
           onClick={toggleMeshPanel}

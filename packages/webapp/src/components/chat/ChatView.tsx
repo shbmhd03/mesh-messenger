@@ -51,7 +51,7 @@ export function ChatView() {
           <div className="empty-state-icon">
             <MeshIcon />
           </div>
-          <h2 className="empty-state-title">Mesh Messenger</h2>
+          <h2 className="empty-state-title">MeshQ</h2>
           <p className="empty-state-desc">
             Select a conversation to start messaging through the mesh network. All messages are end-to-end encrypted.
           </p>
