@@ -1,0 +1,23 @@
+{
+  "name": "mesh-messenger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Advanced mesh messenger — offline-first, E2EE, multi-transport",
+  "workspaces": [
+    "packages/core",
+    "packages/relay",
+    "packages/webapp"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev:webapp": "npm run dev -w packages/webapp",
+    "dev:relay": "npm run dev -w packages/relay",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "convex": "^1.42.1"
+  }
+}

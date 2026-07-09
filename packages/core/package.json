@@ -1,0 +1,23 @@
+{
+  "name": "@mesh/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "test:interop": "node dist/test-vectors-run.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "rimraf": "^6.0.0"
+  }
+}

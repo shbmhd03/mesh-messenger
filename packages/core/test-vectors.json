@@ -1,0 +1,46 @@
+{
+  "vectors": {
+    "packetEncoding": [
+      {
+        "description": "Standard data packet encoding with simple payload",
+        "version": 1,
+        "type": 0,
+        "packetId": "a1b2c3d4e5f6a7b8",
+        "src": "0102030405060708090a0b0c0d0e0f10",
+        "dst": "100f0e0d0c0b0a090807060504030201",
+        "ttl": 7,
+        "hopCount": 1,
+        "timestamp": 1783592288,
+        "payload": "54657374205061796c6f6164",
+        "expectedHex": "0100a1b2c3d4e5f6a7b80102030405060708090a0b0c0d0e0f10100f0e0d0c0b0a09080706050403020107016a4f7560000c54657374205061796c6f6164"
+      },
+      {
+        "description": "Broadcast Hello packet encoding with empty payload",
+        "version": 1,
+        "type": 2,
+        "packetId": "ffffffffffffffff",
+        "src": "05050505050505050505050505050505",
+        "dst": "ffffffffffffffffffffffffffffffff",
+        "ttl": 1,
+        "hopCount": 0,
+        "timestamp": 1783592300,
+        "payload": "",
+        "expectedHex": "0102ffffffffffffffff05050505050505050505050505050505ffffffffffffffffffffffffffffffff01006a4f756c0000"
+      }
+    ],
+    "cryptoDerivations": [
+      {
+        "description": "Constant byte comparison verification vectors",
+        "arrayA": "01020304",
+        "arrayB": "01020304",
+        "expectedEqual": true
+      },
+      {
+        "description": "Constant byte comparison mismatch verification",
+        "arrayA": "01020304",
+        "arrayB": "01020305",
+        "expectedEqual": false
+      }
+    ]
+  }
+}
