@@ -157,7 +157,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       text: text.trim(),
       sent: true,
       timestamp: Date.now(),
-      status: 'pending', // Starts as pending until relay sends stored/direct status
+      status: 'sent', // Set to sent immediately for visual feedback
       transport: 'relay',
     };
 
