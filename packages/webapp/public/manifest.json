@@ -1,0 +1,19 @@
+{
+  "short_name": "MeshQ",
+  "name": "MeshQ — Secure & Invisible Mesh Messenger",
+  "description": "Secure, offline-first mesh messaging with end-to-end encryption. Toggle Stealth Mode to go invisible, and chat securely.",
+  "start_url": "/",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["utilities", "communication"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%236B4EFE%22/><text x=%2250%22 y=%2265%22 font-size=%2250%22 font-weight=%22bold%22 fill=%22white%22 text-anchor=%22middle%22>Q</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

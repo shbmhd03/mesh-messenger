@@ -43,11 +43,31 @@
     }
     </script>
 
+    <!-- PWA Manifest & App Icons -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%236B4EFE%22/><text x=%2250%22 y=%2267%22 font-size=%2255%22 font-weight=%22bold%22 fill=%22white%22 text-anchor=%22middle%22>Q</text></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%236B4EFE%22/><text x=%2250%22 y=%2267%22 font-size=%2255%22 font-weight=%22bold%22 fill=%22white%22 text-anchor=%22middle%22>Q</text></svg>" />
+    
+    <!-- iOS Status Bar & App Shell Configuration -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MeshQ" />
+
+    <!-- External Server Connection Optimization (Preconnect) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://mesh-messenger.onrender.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <!-- Accessibility/No-JS Search Index Fallback -->
+    <noscript>
+      <div style="text-align: center; padding: 50px; font-family: 'Inter', sans-serif; color: #ffffff; background: #0a0a0f; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
+        <h1 style="background: linear-gradient(135deg, #a394ff 0%, #6B4EFE 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 3rem; margin: 0;">MeshQ</h1>
+        <p style="color: #94a3b8; font-size: 1.1rem; max-width: 420px; line-height: 1.6; margin: 0;">MeshQ requires JavaScript to build secure, end-to-end encrypted peer-to-peer chats.</p>
+        <p style="color: #64748b; font-size: 0.9rem; margin: 0;">Please enable JavaScript in your browser settings to continue.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
