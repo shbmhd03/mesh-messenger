@@ -953,3 +953,62 @@ body {
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+
+/* ── Mobile Responsiveness ────────────────────────────────────────────── */
+
+.mobile-back-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    padding: var(--space-2);
+    margin-right: var(--space-2);
+    cursor: pointer;
+    border-radius: var(--radius-full);
+    transition: background var(--transition-fast);
+  }
+
+  .mobile-back-btn:hover {
+    background: var(--bg-hover);
+  }
+
+  .mobile-back-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Split layout override */
+  .sidebar {
+    width: 100vw !important;
+    height: 100vh;
+  }
+
+  .main-area {
+    display: none !important;
+  }
+
+  /* When a chat is active, hide sidebar and show chat view full screen */
+  .app-shell.has-active-chat .sidebar {
+    display: none !important;
+  }
+
+  .app-shell.has-active-chat .main-area {
+    display: flex !important;
+    width: 100vw !important;
+    height: 100vh;
+    flex-direction: column;
+  }
+
+  /* Make panels inside empty state scale down nicely */
+  .empty-state {
+    padding: var(--space-6);
+  }
+}
+

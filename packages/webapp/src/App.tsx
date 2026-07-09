@@ -8,13 +8,15 @@ export default function App() {
   const { sendPacket } = useRelay();
   const registerSendHandler = useMeshStore((state) => state.registerSendHandler);
 
+  const hasActiveConversation = useMeshStore((state) => state.activeConversationId !== null);
+
   useEffect(() => {
     // Bind the Zustand store to the active WebSocket sendPacket transport
     registerSendHandler(sendPacket);
   }, [sendPacket, registerSendHandler]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${hasActiveConversation ? 'has-active-chat' : ''}`}>
       <Sidebar />
       <ChatView />
     </div>
