@@ -15,6 +15,7 @@ export interface Contact {
   hopCount: number;
   transport: 'ble' | 'wifi' | 'relay' | 'webrtc';
   verified: boolean;
+  chatStatus?: 'none' | 'waiting_approval' | 'waiting_approval_sent' | 'requested' | 'accepted';
 }
 
 export interface Message {
@@ -71,6 +72,11 @@ interface MeshState {
   setOwnDisplayName: (name: string) => void;
   setStealthMode: (enabled: boolean) => void; // added for invisible toggle
   connectToPeerById: (peerId: string) => boolean; // added for manual channel connect
+  sendChatRequest: (contactId: string) => void; // added for stealth requests
+  acceptChatRequest: (contactId: string) => void; // added for stealth requests
+  declineChatRequest: (contactId: string) => void; // added for stealth requests
+  handleIncomingChatRequest: (fromNodeId: string, senderName?: string) => void; // added for stealth requests
+  handleIncomingChatAccept: (fromNodeId: string) => void; // added for stealth requests
   setActiveConversation: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   sendMessage: (conversationId: string, text: string) => void;
@@ -143,16 +149,20 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       const initials = id.substring(0, 2);
       const color = getDeterministicColor(id);
 
+      // Check if peer is currently public online
+      const isOnline = state.meshNodes.some((n) => n.id === id);
+
       const newContact: Contact = {
         id,
         nodeId: id,
         name,
         initials,
         color,
-        online: false, // Default to offline until direct socket ping exchanges are negotiated
+        online: isOnline,
         hopCount: 1,
         transport: 'relay',
         verified: false,
+        chatStatus: isOnline ? 'accepted' : 'waiting_approval',
       };
 
       const newConv: Conversation = {
@@ -172,6 +182,125 @@ export const useMeshStore = create<MeshState>((set, get) => ({
 
     set({ activeConversationId: id });
     return true;
+  },
+
+  // Action: send a connection invitation to a stealth node
+  sendChatRequest: (contactId) => {
+    const state = get();
+    set((state) => ({
+      contacts: state.contacts.map((c) =>
+        c.id === contactId ? { ...c, chatStatus: 'waiting_approval_sent' } : c
+      ),
+      conversations: state.conversations.map((conv) =>
+        conv.id === contactId
+          ? { ...conv, contact: { ...conv.contact, chatStatus: 'waiting_approval_sent' } }
+          : conv
+      ),
+    }));
+
+    if (state.sendPacketHandler) {
+      try {
+        state.sendPacketHandler(contactId, JSON.stringify({
+          type: 'chat_request',
+          senderName: state.ownDisplayName,
+        }));
+      } catch (e) {}
+    }
+  },
+
+  // Action: accept incoming connection request from a stealth node
+  acceptChatRequest: (contactId) => {
+    set((state) => ({
+      contacts: state.contacts.map((c) =>
+        c.id === contactId ? { ...c, chatStatus: 'accepted' } : c
+      ),
+      conversations: state.conversations.map((conv) =>
+        conv.id === contactId
+          ? { ...conv, contact: { ...conv.contact, chatStatus: 'accepted' } }
+          : conv
+      ),
+    }));
+
+    const state = get();
+    if (state.sendPacketHandler) {
+      try {
+        state.sendPacketHandler(contactId, JSON.stringify({
+          type: 'chat_accept',
+        }));
+      } catch (e) {}
+    }
+  },
+
+  // Action: decline incoming request from a stealth node
+  declineChatRequest: (contactId) => {
+    set((state) => ({
+      conversations: state.conversations.filter((c) => c.id !== contactId),
+      contacts: state.contacts.filter((c) => c.id !== contactId),
+      activeConversationId: state.activeConversationId === contactId ? null : state.activeConversationId
+    }));
+  },
+
+  // Action: process incoming request packet from a stealth peer
+  handleIncomingChatRequest: (fromNodeId, senderName) => {
+    const state = get();
+    const conv = state.conversations.find((c) => c.id === fromNodeId);
+    const finalName = senderName || (conv ? conv.contact.name : `Node ${fromNodeId.substring(0, 8)}`);
+    const initials = finalName.substring(0, 2).toUpperCase();
+
+    if (!conv) {
+      const color = getDeterministicColor(fromNodeId);
+      const newContact: Contact = {
+        id: fromNodeId,
+        nodeId: fromNodeId,
+        name: finalName,
+        initials,
+        color,
+        online: true,
+        hopCount: 1,
+        transport: 'relay',
+        verified: false,
+        chatStatus: 'requested',
+      };
+
+      const newConv: Conversation = {
+        id: fromNodeId,
+        contact: newContact,
+        messages: [],
+        lastMessage: 'Incoming chat request',
+        lastTime: Date.now(),
+        unread: 1,
+      };
+
+      set((state) => ({
+        contacts: [...state.contacts, newContact],
+        conversations: [...state.conversations, newConv],
+      }));
+    } else {
+      set((state) => ({
+        contacts: state.contacts.map((c) =>
+          c.id === fromNodeId ? { ...c, chatStatus: 'requested', name: finalName, initials } : c
+        ),
+        conversations: state.conversations.map((c) =>
+          c.id === fromNodeId
+            ? { ...c, contact: { ...c.contact, chatStatus: 'requested', name: finalName, initials }, unread: c.unread + 1 }
+            : c
+        ),
+      }));
+    }
+  },
+
+  // Action: process incoming approval response packet from a stealth peer
+  handleIncomingChatAccept: (fromNodeId) => {
+    set((state) => ({
+      contacts: state.contacts.map((c) =>
+        c.id === fromNodeId ? { ...c, chatStatus: 'accepted', online: true } : c
+      ),
+      conversations: state.conversations.map((conv) =>
+        conv.id === fromNodeId
+          ? { ...conv, contact: { ...conv.contact, chatStatus: 'accepted', online: true } }
+          : conv
+      ),
+    }));
   },
 
   // Clear unread badge counter when selecting a conversation thread

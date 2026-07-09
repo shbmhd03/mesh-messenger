@@ -53,6 +53,12 @@ export function useRelay() {
                   // Update outgoing message delivery status (single tick -> double tick!)
                   const updateMessageStatus = useMeshStore.getState().updateMessageStatus;
                   updateMessageStatus(fromNodeId, payload.id, payload.status);
+                } else if (payload.type === 'chat_request') {
+                  // Handle incoming authorization invite from stealth node
+                  useMeshStore.getState().handleIncomingChatRequest(fromNodeId, payload.senderName);
+                } else if (payload.type === 'chat_accept') {
+                  // Handle incoming acceptance response from stealth node
+                  useMeshStore.getState().handleIncomingChatAccept(fromNodeId);
                 }
                 return;
               }
