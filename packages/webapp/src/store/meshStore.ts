@@ -50,6 +50,7 @@ export interface MeshNode {
 
 interface MeshState {
   ownNodeId: string;
+  ownDisplayName: string; // added for profile names
 
   contacts: Contact[];
   conversations: Conversation[];
@@ -66,10 +67,11 @@ interface MeshState {
 
   // Actions
   registerSendHandler: (handler: (destNodeId: string, text: string) => void) => void;
+  setOwnDisplayName: (name: string) => void; // added profile action
   setActiveConversation: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   sendMessage: (conversationId: string, text: string) => void;
-  addLiveMessage: (fromNodeId: string, text: string, isSent: boolean, packetId?: string) => void;
+  addLiveMessage: (fromNodeId: string, text: string, isSent: boolean, packetId?: string, senderName?: string) => void;
   updateMessageStatus: (conversationId: string, messageId: string, status: 'delivered' | 'read') => void;
   updateLivePeers: (peerNodeIds: string[]) => void;
   toggleMeshPanel: () => void;
@@ -102,6 +104,7 @@ const sessionNodeId = generateSessionNodeId();
 
 export const useMeshStore = create<MeshState>((set, get) => ({
   ownNodeId: sessionNodeId,
+  ownDisplayName: `Node ${sessionNodeId.substring(0, 8)}`, // Default username
 
   contacts: [],
   conversations: [],
@@ -117,7 +120,10 @@ export const useMeshStore = create<MeshState>((set, get) => ({
 
   registerSendHandler: (handler) => set({ sendPacketHandler: handler }),
 
-  // FIX: Clear unread badge counter when selecting a conversation thread
+  // Action: updates own profile display name
+  setOwnDisplayName: (name) => set({ ownDisplayName: name.trim() || `Node ${sessionNodeId.substring(0, 8)}` }),
+
+  // Clear unread badge counter when selecting a conversation thread
   setActiveConversation: (id) => set((state) => {
     // Send a read receipt for the incoming messages when clicking the chat
     const conversation = state.conversations.find((c) => c.id === id);
@@ -157,7 +163,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       text: text.trim(),
       sent: true,
       timestamp: Date.now(),
-      status: 'sent', // Set to sent immediately for visual feedback
+      status: 'sent',
       transport: 'relay',
     };
 
@@ -177,17 +183,18 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     // Trigger physical WebSocket packet send via registered handler
     const handler = get().sendPacketHandler;
     if (handler) {
-      // FIX: Wrap payload inside structured JSON containing a unique message ID to support receipts
+      // Include own nickname so recipient can instantly resolve NodeID to your actual name
       const payload = JSON.stringify({
         type: 'msg',
         id: messageId,
-        text: text.trim()
+        text: text.trim(),
+        senderName: get().ownDisplayName
       });
       handler(conversationId, payload);
     }
   },
 
-  addLiveMessage: (fromNodeId, text, isSent, packetId) => {
+  addLiveMessage: (fromNodeId, text, isSent, packetId, senderName) => {
     const state = get();
     const isActive = state.activeConversationId === fromNodeId;
     const resolvedPacketId = packetId || `m-${Date.now()}`;
@@ -203,19 +210,18 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       transport: 'relay',
     };
 
-    // FIX: Set unread count based on active panel focus state
     const unreadIncrement = (isSent || isActive) ? 0 : 1;
 
-    if (!conv) {
-      // Create new contact and conversation dynamically on message arrival
-      const name = `Node ${fromNodeId.substring(0, 8)}`;
-      const initials = fromNodeId.substring(0, 2);
-      const color = getDeterministicColor(fromNodeId);
+    // Resolve name: prefer custom shared senderName, fallback to Node hex
+    const finalName = senderName || (conv ? conv.contact.name : `Node ${fromNodeId.substring(0, 8)}`);
+    const initials = finalName.substring(0, 2).toUpperCase();
 
+    if (!conv) {
+      const color = getDeterministicColor(fromNodeId);
       const newContact: Contact = {
         id: fromNodeId,
         nodeId: fromNodeId,
-        name,
+        name: finalName,
         initials,
         color,
         online: true,
@@ -243,12 +249,18 @@ export const useMeshStore = create<MeshState>((set, get) => ({
           c.id === fromNodeId
             ? {
                 ...c,
+                contact: { ...c.contact, name: finalName, initials },
                 messages: [...c.messages, newMessage],
                 lastMessage: text.trim(),
                 lastTime: Date.now(),
                 unread: c.unread + unreadIncrement,
               }
             : c
+        ),
+        contacts: state.contacts.map((contact) =>
+          contact.id === fromNodeId
+            ? { ...contact, name: finalName, initials }
+            : contact
         ),
       }));
     }
@@ -284,7 +296,6 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   },
 
   updateLivePeers: (peerNodeIds) => {
-    // 1. Arrange peer nodes in a circle around the center (YOU) for the SVG topology
     const count = peerNodeIds.length;
     const newMeshNodes: MeshNode[] = peerNodeIds.map((id, index) => {
       const angle = (index * 2 * Math.PI) / count;
@@ -301,11 +312,10 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         batteryClass: 'mains',
         relayCapable: true,
         x,
-      y,
+        y,
       };
     });
 
-    // 2. Mark existing contacts as online/offline based on presence in active peer list
     set((state) => {
       const updatedContacts = state.contacts.map((c) => ({
         ...c,

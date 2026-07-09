@@ -35,6 +35,8 @@ export function Sidebar() {
     meshNodes,
     relayConnected,
     ownNodeId,
+    ownDisplayName,
+    setOwnDisplayName,
     meshPanelOpen,
     toggleMeshPanel,
   } = useMeshStore();
@@ -59,6 +61,28 @@ export function Sidebar() {
         >
           <NetworkIcon />
         </button>
+      </div>
+
+      {/* User Profile Info & Custom Nickname Input */}
+      <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255, 255, 255, 0.01)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }}></div>
+          <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>My Profile</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: '4px' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--accent)' }}>
+            ME
+          </div>
+          <input
+            type="text"
+            value={ownDisplayName}
+            onChange={(e) => setOwnDisplayName(e.target.value)}
+            placeholder="Set your name..."
+            style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none', padding: '2px 0' }}
+            title="Edit your nickname. Other peers will see this name on their screens when you chat with them."
+            id="own-display-name-input"
+          />
+        </div>
       </div>
 
       {/* Mesh Panel (collapsible) */}

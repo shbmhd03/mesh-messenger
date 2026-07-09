@@ -32,7 +32,7 @@ export function useRelay() {
               const payload = JSON.parse(text);
               if (payload && typeof payload === 'object') {
                 if (payload.type === 'msg') {
-                  addLiveMessage(fromNodeId, payload.text, false, payload.id);
+                  addLiveMessage(fromNodeId, payload.text, false, payload.id, payload.senderName);
                 } else if (payload.type === 'ack') {
                   // Update outgoing message delivery status (single tick -> double tick!)
                   const updateMessageStatus = useMeshStore.getState().updateMessageStatus;
