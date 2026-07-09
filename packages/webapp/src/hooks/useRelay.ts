@@ -28,6 +28,21 @@ export function useRelay() {
           try {
             // Decrypt base64 packet payload
             const text = atob(base64Data);
+            try {
+              const payload = JSON.parse(text);
+              if (payload && typeof payload === 'object') {
+                if (payload.type === 'msg') {
+                  addLiveMessage(fromNodeId, payload.text, false, payload.id);
+                } else if (payload.type === 'ack') {
+                  // Update outgoing message delivery status (single tick -> double tick!)
+                  const updateMessageStatus = useMeshStore.getState().updateMessageStatus;
+                  updateMessageStatus(fromNodeId, payload.id, payload.status);
+                }
+                return;
+              }
+            } catch (jsonErr) {
+              // Not structured JSON — treat as plain text legacy packet
+            }
             addLiveMessage(fromNodeId, text, false);
           } catch (e) {
             console.error('[relay] failed to decode packet:', e);
@@ -35,6 +50,21 @@ export function useRelay() {
         } else if (msg.type === 'peers') {
           const peerList = (msg.peers as string[]) || [];
           updateLivePeers(peerList);
+        } else if (msg.type === 'stored') {
+          // Server confirmed store-and-forward queueing in Convex (single checkmark!)
+          const destNodeId = msg.destNodeId as string;
+          const conversations = useMeshStore.getState().conversations;
+          const conv = conversations.find(c => c.id === destNodeId);
+          const pendingMsg = conv?.messages.filter(m => m.status === 'pending')[0];
+          
+          if (pendingMsg) {
+            useMeshStore.setState({
+              conversations: conversations.map(c => c.id === destNodeId ? {
+                ...c,
+                messages: c.messages.map(m => m.id === pendingMsg.id ? { ...m, status: 'sent' } : m)
+              } : c)
+            });
+          }
         }
       },
       onPeerCountChange: (count: number) => {

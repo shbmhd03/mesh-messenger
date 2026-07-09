@@ -7,7 +7,7 @@ import { create } from 'zustand';
 
 export interface Contact {
   id: string;
-  nodeId: string; // added for UI compatibility
+  nodeId: string;
   name: string;
   initials: string;
   color: string;
@@ -38,11 +38,11 @@ export interface Conversation {
 
 export interface MeshNode {
   id: string;
-  nodeId: string; // added for UI compatibility
+  nodeId: string;
   displayId: string;
   hopCount: number;
   transport: 'ble' | 'wifi' | 'relay' | 'webrtc';
-  batteryClass: 'mains' | 'high' | 'normal' | 'low' | 'ephemeral'; // added for UI compatibility
+  batteryClass: 'mains' | 'high' | 'normal' | 'low' | 'ephemeral';
   relayCapable: boolean;
   x: number;
   y: number;
@@ -69,7 +69,8 @@ interface MeshState {
   setActiveConversation: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   sendMessage: (conversationId: string, text: string) => void;
-  addLiveMessage: (fromNodeId: string, text: string, isSent: boolean) => void;
+  addLiveMessage: (fromNodeId: string, text: string, isSent: boolean, packetId?: string) => void;
+  updateMessageStatus: (conversationId: string, messageId: string, status: 'delivered' | 'read') => void;
   updateLivePeers: (peerNodeIds: string[]) => void;
   toggleMeshPanel: () => void;
   showSafetyNumber: (contactId: string | null) => void;
@@ -116,19 +117,47 @@ export const useMeshStore = create<MeshState>((set, get) => ({
 
   registerSendHandler: (handler) => set({ sendPacketHandler: handler }),
 
-  setActiveConversation: (id) => set({ activeConversationId: id }),
+  // FIX: Clear unread badge counter when selecting a conversation thread
+  setActiveConversation: (id) => set((state) => {
+    // Send a read receipt for the incoming messages when clicking the chat
+    const conversation = state.conversations.find((c) => c.id === id);
+    const lastUnreadMessage = conversation?.messages
+      .filter((m) => !m.sent && m.status !== 'read')
+      .slice(-1)[0];
+
+    if (id && lastUnreadMessage && state.sendPacketHandler) {
+      try {
+        state.sendPacketHandler(id, JSON.stringify({
+          type: 'ack',
+          id: lastUnreadMessage.id,
+          status: 'read'
+        }));
+      } catch (e) {}
+    }
+
+    return {
+      activeConversationId: id,
+      conversations: state.conversations.map((conv) =>
+        conv.id === id
+          ? { ...conv, unread: 0, messages: conv.messages.map((m) => !m.sent ? { ...m, status: 'read' } : m) }
+          : conv
+      ),
+    };
+  }),
+
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   sendMessage: (conversationId, text) => {
     if (!text.trim()) return;
 
+    const messageId = `m-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const newMessage: Message = {
-      id: `m-${Date.now()}`,
+      id: messageId,
       conversationId,
       text: text.trim(),
       sent: true,
       timestamp: Date.now(),
-      status: 'sent',
+      status: 'pending', // Starts as pending until relay sends stored/direct status
       transport: 'relay',
     };
 
@@ -148,23 +177,34 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     // Trigger physical WebSocket packet send via registered handler
     const handler = get().sendPacketHandler;
     if (handler) {
-      handler(conversationId, text.trim());
+      // FIX: Wrap payload inside structured JSON containing a unique message ID to support receipts
+      const payload = JSON.stringify({
+        type: 'msg',
+        id: messageId,
+        text: text.trim()
+      });
+      handler(conversationId, payload);
     }
   },
 
-  addLiveMessage: (fromNodeId, text, isSent) => {
+  addLiveMessage: (fromNodeId, text, isSent, packetId) => {
     const state = get();
+    const isActive = state.activeConversationId === fromNodeId;
+    const resolvedPacketId = packetId || `m-${Date.now()}`;
     let conv = state.conversations.find((c) => c.id === fromNodeId);
 
     const newMessage: Message = {
-      id: `m-${Date.now()}`,
+      id: resolvedPacketId,
       conversationId: fromNodeId,
       text: text.trim(),
       sent: isSent,
       timestamp: Date.now(),
-      status: isSent ? 'sent' : 'read',
+      status: isSent ? 'sent' : (isActive ? 'read' : 'delivered'),
       transport: 'relay',
     };
+
+    // FIX: Set unread count based on active panel focus state
+    const unreadIncrement = (isSent || isActive) ? 0 : 1;
 
     if (!conv) {
       // Create new contact and conversation dynamically on message arrival
@@ -190,7 +230,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         messages: [newMessage],
         lastMessage: text.trim(),
         lastTime: Date.now(),
-        unread: isSent ? 0 : 1,
+        unread: unreadIncrement,
       };
 
       set((state) => ({
@@ -206,12 +246,41 @@ export const useMeshStore = create<MeshState>((set, get) => ({
                 messages: [...c.messages, newMessage],
                 lastMessage: text.trim(),
                 lastTime: Date.now(),
-                unread: isSent ? c.unread : c.unread + 1,
+                unread: c.unread + unreadIncrement,
               }
             : c
         ),
       }));
     }
+
+    // Send read/delivered acknowledgment receipt if message was received from peer
+    if (!isSent && state.sendPacketHandler) {
+      try {
+        state.sendPacketHandler(fromNodeId, JSON.stringify({
+          type: 'ack',
+          id: resolvedPacketId,
+          status: isActive ? 'read' : 'delivered'
+        }));
+      } catch (e) {}
+    }
+  },
+
+  // Action: updates status ticks of outgoing messages on delivery/read ack arrival
+  updateMessageStatus: (conversationId, messageId, status) => {
+    set((state) => ({
+      conversations: state.conversations.map((conv) =>
+        conv.id === conversationId
+          ? {
+              ...conv,
+              messages: conv.messages.map((m) =>
+                m.id === messageId
+                  ? { ...m, status: (status === 'read' || m.status === 'read') ? 'read' : 'delivered' }
+                  : m
+              )
+            }
+          : conv
+      )
+    }));
   },
 
   updateLivePeers: (peerNodeIds) => {
@@ -219,7 +288,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     const count = peerNodeIds.length;
     const newMeshNodes: MeshNode[] = peerNodeIds.map((id, index) => {
       const angle = (index * 2 * Math.PI) / count;
-      const radius = 30; // Radius of layout circle
+      const radius = 30;
       const x = 50 + radius * Math.cos(angle);
       const y = 50 + radius * Math.sin(angle);
 
@@ -232,7 +301,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         batteryClass: 'mains',
         relayCapable: true,
         x,
-        y,
+      y,
       };
     });
 
