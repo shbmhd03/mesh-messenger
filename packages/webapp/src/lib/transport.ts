@@ -153,6 +153,14 @@ export class RelayTransport {
     this.send({ type: 'peers' });
   }
 
+  /** Send dynamic name change event */
+  rename(displayName: string): void {
+    this.send({
+      type: 'rename',
+      displayName,
+    });
+  }
+
   /** Get current connection state */
   getState(): ConnectionState {
     return this.state;

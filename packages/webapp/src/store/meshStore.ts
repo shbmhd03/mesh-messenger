@@ -73,7 +73,7 @@ interface MeshState {
   sendMessage: (conversationId: string, text: string) => void;
   addLiveMessage: (fromNodeId: string, text: string, isSent: boolean, packetId?: string, senderName?: string) => void;
   updateMessageStatus: (conversationId: string, messageId: string, status: 'delivered' | 'read') => void;
-  updateLivePeers: (peerNodeIds: string[]) => void;
+  updateLivePeers: (peerNodeIds: { id: string; name: string }[]) => void;
   toggleMeshPanel: () => void;
   showSafetyNumber: (contactId: string | null) => void;
   verifyContact: (contactId: string) => void;
@@ -295,18 +295,18 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     }));
   },
 
-  updateLivePeers: (peerNodeIds) => {
-    const count = peerNodeIds.length;
-    const newMeshNodes: MeshNode[] = peerNodeIds.map((id, index) => {
+  updateLivePeers: (peerList) => {
+    const count = peerList.length;
+    const newMeshNodes: MeshNode[] = peerList.map((peer, index) => {
       const angle = (index * 2 * Math.PI) / count;
       const radius = 30;
       const x = 50 + radius * Math.cos(angle);
       const y = 50 + radius * Math.sin(angle);
 
       return {
-        id,
-        nodeId: id,
-        displayId: `${id.substring(0, 8)}...`,
+        id: peer.id,
+        nodeId: peer.id,
+        displayId: `${peer.id.substring(0, 8)}...`,
         hopCount: 1,
         transport: 'relay',
         batteryClass: 'mains',
@@ -316,22 +316,34 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       };
     });
 
+    const peerNodeIds = peerList.map((p) => p.id);
+
     set((state) => {
-      const updatedContacts = state.contacts.map((c) => ({
-        ...c,
-        online: peerNodeIds.includes(c.id),
-      }));
+      const peerNameMap = new Map(peerList.map(p => [p.id, p.name]));
+
+      const updatedContacts = state.contacts.map((c) => {
+        const isOnline = peerNodeIds.includes(c.id);
+        const name = peerNameMap.get(c.id) || c.name;
+        const initials = name.substring(0, 2).toUpperCase();
+        return {
+          ...c,
+          name,
+          initials,
+          online: isOnline,
+        };
+      });
 
       // Ensure any newly discovered peer has a contact record
       const finalContacts = [...updatedContacts];
-      for (const id of peerNodeIds) {
-        if (!finalContacts.some((c) => c.id === id)) {
+      for (const peer of peerList) {
+        if (!finalContacts.some((c) => c.id === peer.id)) {
+          const initials = peer.name.substring(0, 2).toUpperCase();
           finalContacts.push({
-            id,
-            nodeId: id,
-            name: `Node ${id.substring(0, 8)}`,
-            initials: id.substring(0, 2),
-            color: getDeterministicColor(id),
+            id: peer.id,
+            nodeId: peer.id,
+            name: peer.name,
+            initials,
+            color: getDeterministicColor(peer.id),
             online: true,
             hopCount: 1,
             transport: 'relay',
@@ -340,12 +352,19 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         }
       }
 
-      // Sync active conversation contacts online flag
+      // Sync active conversation contacts online flag & updated names
       const updatedConversations = state.conversations.map((conv) => {
         const isOnline = peerNodeIds.includes(conv.id);
+        const name = peerNameMap.get(conv.id) || conv.contact.name;
+        const initials = name.substring(0, 2).toUpperCase();
         return {
           ...conv,
-          contact: { ...conv.contact, online: isOnline },
+          contact: {
+            ...conv.contact,
+            name,
+            initials,
+            online: isOnline
+          },
         };
       });
 

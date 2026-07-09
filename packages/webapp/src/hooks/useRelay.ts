@@ -8,7 +8,7 @@ import { useMeshStore } from '../store/meshStore';
 import { RelayTransport, type ConnectionState, type RelayMessage } from '../lib/transport';
 
 export function useRelay() {
-  const { ownNodeId, relayConnected, addLiveMessage, updateLivePeers } = useMeshStore();
+  const { ownNodeId, relayConnected, addLiveMessage, updateLivePeers, ownDisplayName } = useMeshStore();
   const transportRef = useRef<RelayTransport | null>(null);
 
   const relayUrl = (import.meta as any).env.DEV
@@ -16,9 +16,18 @@ export function useRelay() {
     : 'wss://mesh-messenger.onrender.com/mesh';
 
   useEffect(() => {
+    if (relayConnected && transportRef.current) {
+      transportRef.current.rename(ownDisplayName);
+    }
+  }, [ownDisplayName, relayConnected]);
+
+  useEffect(() => {
     const transport = new RelayTransport(ownNodeId, relayUrl, {
       onStateChange: (state: ConnectionState) => {
         useMeshStore.setState({ relayConnected: state === 'connected' });
+        if (state === 'connected') {
+          transport.rename(useMeshStore.getState().ownDisplayName);
+        }
       },
       onMessage: (msg: RelayMessage) => {
         if (msg.type === 'packet') {
@@ -48,7 +57,7 @@ export function useRelay() {
             console.error('[relay] failed to decode packet:', e);
           }
         } else if (msg.type === 'peers') {
-          const peerList = (msg.peers as string[]) || [];
+          const peerList = (msg.peers as { id: string; name: string }[]) || [];
           updateLivePeers(peerList);
         } else if (msg.type === 'stored') {
           // Server confirmed store-and-forward queueing in Convex (single checkmark!)

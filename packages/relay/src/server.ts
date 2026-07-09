@@ -23,6 +23,9 @@ const HOST = process.env.RELAY_HOST ?? '0.0.0.0';
 /** Connected peers: nodeId (hex) → WebSocket */
 const peers = new Map<string, WebSocket>();
 
+/** Connected peer display names: nodeId (hex) → displayName string */
+const peerNames = new Map<string, string>();
+
 const signaling = new SignalingRelay();
 
 /** Rate limiting: nodeId → { count, windowStart } */
@@ -550,12 +553,15 @@ async function start() {
     let nodeId: string | null = null;
 
     const broadcastPeers = () => {
-      const list = [...peers.keys()];
+      const list = [...peers.keys()].map(id => ({
+        id,
+        name: peerNames.get(id) || `Node ${id.substring(0, 8)}`
+      }));
       for (const [id, ws] of peers.entries()) {
         if (ws.readyState === 1) { // OPEN
           ws.send(JSON.stringify({
             type: 'peers',
-            peers: list.filter(pId => pId !== id),
+            peers: list.filter(p => p.id !== id),
             count: list.length - 1,
           }));
         }
@@ -575,6 +581,8 @@ async function start() {
             return;
           }
 
+          const displayName = msg.displayName as string || `Node ${nodeId.substring(0, 8)}`;
+
           // Register node registration metadata in Convex cloud database
           await convex.mutation(api.registrations.register, {
             nodeId,
@@ -588,6 +596,7 @@ async function start() {
           }
 
           peers.set(nodeId, socket);
+          peerNames.set(nodeId, displayName);
           server.log.info({ nodeId, totalPeers: peers.size }, 'peer registered');
           
           // Notify all nodes of the updated peer list
@@ -710,6 +719,16 @@ async function start() {
           return;
         }
 
+        // ── Rename / Profile Update ──────────────────────────────────────
+        if (msg.type === 'rename') {
+          const newName = msg.displayName as string;
+          if (newName && typeof newName === 'string') {
+            peerNames.set(nodeId, newName.trim());
+            broadcastPeers();
+          }
+          return;
+        }
+
       } catch (err: any) {
         socket.send(JSON.stringify({ type: 'error', error: `invalid message processing: ${err.message}` }));
       }
@@ -718,6 +737,7 @@ async function start() {
     socket.on('close', () => {
       if (nodeId) {
         peers.delete(nodeId);
+        peerNames.delete(nodeId);
         server.log.info({ nodeId, totalPeers: peers.size }, 'peer disconnected');
         broadcastPeers();
       }
