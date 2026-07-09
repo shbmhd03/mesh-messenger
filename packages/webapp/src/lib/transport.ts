@@ -83,6 +83,7 @@ export class RelayTransport {
             this.events.onPeerCountChange(peerCount);
           } else if (msg.type === 'peers') {
             this.events.onPeerCountChange(msg.count as number);
+            this.events.onMessage(msg);
           } else if (msg.type === 'error') {
             this.events.onError(msg.error as string);
           } else {

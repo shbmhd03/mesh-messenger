@@ -549,6 +549,19 @@ async function start() {
   server.get('/mesh', { websocket: true }, (socket, request) => {
     let nodeId: string | null = null;
 
+    const broadcastPeers = () => {
+      const list = [...peers.keys()];
+      for (const [id, ws] of peers.entries()) {
+        if (ws.readyState === 1) { // OPEN
+          ws.send(JSON.stringify({
+            type: 'peers',
+            peers: list.filter(pId => pId !== id),
+            count: list.length - 1,
+          }));
+        }
+      }
+    };
+
     socket.on('message', async (raw: Buffer) => {
       try {
         const msg = JSON.parse(raw.toString());
@@ -576,6 +589,9 @@ async function start() {
 
           peers.set(nodeId, socket);
           server.log.info({ nodeId, totalPeers: peers.size }, 'peer registered');
+          
+          // Notify all nodes of the updated peer list
+          broadcastPeers();
 
           // Drain stored packets from Convex cloud database queue
           const queued = (await convex.mutation(api.packets.drain, {
@@ -703,6 +719,7 @@ async function start() {
       if (nodeId) {
         peers.delete(nodeId);
         server.log.info({ nodeId, totalPeers: peers.size }, 'peer disconnected');
+        broadcastPeers();
       }
     });
 
