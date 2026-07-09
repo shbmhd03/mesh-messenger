@@ -44,6 +44,265 @@ async function start() {
   await server.register(fastifyCors, { origin: true });
   await server.register(fastifyWebsocket);
 
+  // ── Root Landing / Status Page ─────────────────────────────────────────
+  server.get('/', async (request, reply) => {
+    reply.type('text/html').send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesh Messenger Relay</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #040408;
+      --surface: rgba(12, 12, 24, 0.7);
+      --accent: #6b4efe;
+      --accent-glow: rgba(107, 78, 254, 0.4);
+      --green: #00e676;
+      --green-glow: rgba(0, 230, 118, 0.4);
+      --text: #e0e0e6;
+      --text-subtle: #8e8e9f;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Cosmic Grid Background */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(var(--accent-glow) 1px, transparent 1px),
+        linear-gradient(rgba(107, 78, 254, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(107, 78, 254, 0.05) 1px, transparent 1px);
+      background-size: 40px 40px, 80px 80px, 80px 80px;
+      z-index: 1;
+      opacity: 0.8;
+      animation: shiftBackground 100s linear infinite;
+    }
+
+    @keyframes shiftBackground {
+      from { background-position: 0 0; }
+      to { background-position: 80px 80px; }
+    }
+
+    /* Glowing space dust */
+    .glow-orb {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      top: 10%;
+      left: 20%;
+      z-index: 2;
+      pointer-events: none;
+      animation: floatOrb 20s ease-in-out infinite;
+    }
+
+    @keyframes floatOrb {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-50px) scale(1.1); }
+    }
+
+    /* Glassmorphic Panel */
+    .card {
+      position: relative;
+      z-index: 10;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 40px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      text-align: center;
+      animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95) translateY(20px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* SVG Pulser */
+    .status-ring {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-ring::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--green-glow);
+      animation: pulseGlow 2s infinite ease-out;
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+
+    .node-icon {
+      position: relative;
+      z-index: 2;
+      width: 60px;
+      height: 60px;
+      background: #101020;
+      border: 2px solid var(--green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--green);
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 0%, #a29bfe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 32px;
+    }
+
+    /* Stats Grid */
+    .stats-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .stat-value {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 22px;
+      font-weight: bold;
+      color: var(--text);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* E2EE Tag */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(107, 78, 254, 0.15);
+      border: 1px solid rgba(107, 78, 254, 0.3);
+      color: #b3a2ff;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border-radius: 50px;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-orb"></div>
+  
+  <div class="card">
+    <div class="status-ring">
+      <div class="node-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+    </div>
+    
+    <div class="title">unixora.tech</div>
+    <div class="subtitle">Mesh Router Active</div>
+
+    <div class="stats-container">
+      <div class="stat-box">
+        <div class="stat-value" id="peers-count">${peers.size}</div>
+        <div class="stat-label">Active Peers</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="uptime-val">${Math.floor(process.uptime())}s</div>
+        <div class="stat-label">System Uptime</div>
+      </div>
+    </div>
+
+    <div class="badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      End-to-End Encrypted (Signal Spec)
+    </div>
+  </div>
+
+  <script>
+    // Live update stats without refreshing the page
+    setInterval(async () => {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        document.getElementById('peers-count').innerText = data.peers;
+        document.getElementById('uptime-val').innerText = Math.floor(data.uptime) + 's';
+      } catch (e) {}
+    }, 5000);
+  </script>
+</body>
+</html>
+    `);
+  });
+
   // ── Health Check ───────────────────────────────────────────────────────
   server.get('/health', async () => ({
     status: 'ok',
