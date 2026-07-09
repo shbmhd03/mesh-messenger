@@ -8,7 +8,7 @@ import { useMeshStore } from '../store/meshStore';
 import { RelayTransport, type ConnectionState, type RelayMessage } from '../lib/transport';
 
 export function useRelay() {
-  const { ownNodeId, relayConnected, addLiveMessage, updateLivePeers, ownDisplayName } = useMeshStore();
+  const { ownNodeId, relayConnected, addLiveMessage, updateLivePeers, ownDisplayName, stealthMode } = useMeshStore();
   const transportRef = useRef<RelayTransport | null>(null);
 
   const relayUrl = (import.meta as any).env.DEV
@@ -22,11 +22,18 @@ export function useRelay() {
   }, [ownDisplayName, relayConnected]);
 
   useEffect(() => {
+    if (relayConnected && transportRef.current) {
+      transportRef.current.setStealth(stealthMode);
+    }
+  }, [stealthMode, relayConnected]);
+
+  useEffect(() => {
     const transport = new RelayTransport(ownNodeId, relayUrl, {
       onStateChange: (state: ConnectionState) => {
         useMeshStore.setState({ relayConnected: state === 'connected' });
         if (state === 'connected') {
           transport.rename(useMeshStore.getState().ownDisplayName);
+          transport.setStealth(useMeshStore.getState().stealthMode);
         }
       },
       onMessage: (msg: RelayMessage) => {

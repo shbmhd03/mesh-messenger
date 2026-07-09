@@ -50,7 +50,8 @@ export interface MeshNode {
 
 interface MeshState {
   ownNodeId: string;
-  ownDisplayName: string; // added for profile names
+  ownDisplayName: string;
+  stealthMode: boolean; // added for invisible mode
 
   contacts: Contact[];
   conversations: Conversation[];
@@ -67,7 +68,9 @@ interface MeshState {
 
   // Actions
   registerSendHandler: (handler: (destNodeId: string, text: string) => void) => void;
-  setOwnDisplayName: (name: string) => void; // added profile action
+  setOwnDisplayName: (name: string) => void;
+  setStealthMode: (enabled: boolean) => void; // added for invisible toggle
+  connectToPeerById: (peerId: string) => boolean; // added for manual channel connect
   setActiveConversation: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   sendMessage: (conversationId: string, text: string) => void;
@@ -105,6 +108,7 @@ const sessionNodeId = generateSessionNodeId();
 export const useMeshStore = create<MeshState>((set, get) => ({
   ownNodeId: sessionNodeId,
   ownDisplayName: `Node ${sessionNodeId.substring(0, 8)}`, // Default username
+  stealthMode: false, // Starts visible by default
 
   contacts: [],
   conversations: [],
@@ -122,6 +126,53 @@ export const useMeshStore = create<MeshState>((set, get) => ({
 
   // Action: updates own profile display name
   setOwnDisplayName: (name) => set({ ownDisplayName: name.trim() || `Node ${sessionNodeId.substring(0, 8)}` }),
+
+  // Action: toggle stealth/invisible mode connection status
+  setStealthMode: (enabled) => set({ stealthMode: enabled }),
+
+  // Action: initiates a private manual peer contact channel using a specific Node ID code
+  connectToPeerById: (peerId) => {
+    const id = peerId.trim().toUpperCase();
+    if (!id || id.length < 4) return false;
+
+    const state = get();
+    const conv = state.conversations.find((c) => c.id === id);
+
+    if (!conv) {
+      const name = `Node ${id}`;
+      const initials = id.substring(0, 2);
+      const color = getDeterministicColor(id);
+
+      const newContact: Contact = {
+        id,
+        nodeId: id,
+        name,
+        initials,
+        color,
+        online: false, // Default to offline until direct socket ping exchanges are negotiated
+        hopCount: 1,
+        transport: 'relay',
+        verified: false,
+      };
+
+      const newConv: Conversation = {
+        id,
+        contact: newContact,
+        messages: [],
+        lastMessage: 'Direct chat established via Peer ID',
+        lastTime: Date.now(),
+        unread: 0,
+      };
+
+      set((state) => ({
+        contacts: [...state.contacts, newContact],
+        conversations: [...state.conversations, newConv],
+      }));
+    }
+
+    set({ activeConversationId: id });
+    return true;
+  },
 
   // Clear unread badge counter when selecting a conversation thread
   setActiveConversation: (id) => set((state) => {

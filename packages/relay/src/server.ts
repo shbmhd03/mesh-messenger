@@ -26,6 +26,9 @@ const peers = new Map<string, WebSocket>();
 /** Connected peer display names: nodeId (hex) → displayName string */
 const peerNames = new Map<string, string>();
 
+/** Peers in Stealth/Invisible Mode: nodeId (hex) set */
+const peerStealth = new Set<string>();
+
 const signaling = new SignalingRelay();
 
 /** Rate limiting: nodeId → { count, windowStart } */
@@ -555,14 +558,16 @@ async function start() {
     const broadcastPeers = () => {
       const list = [...peers.keys()].map(id => ({
         id,
-        name: peerNames.get(id) || `Node ${id.substring(0, 8)}`
+        name: peerNames.get(id) || `Node ${id.substring(0, 8)}`,
+        stealth: peerStealth.has(id)
       }));
       for (const [id, ws] of peers.entries()) {
         if (ws.readyState === 1) { // OPEN
+          const visibleList = list.filter(p => p.id !== id && !p.stealth);
           ws.send(JSON.stringify({
             type: 'peers',
-            peers: list.filter(p => p.id !== id),
-            count: list.length - 1,
+            peers: visibleList,
+            count: visibleList.length,
           }));
         }
       }
@@ -729,6 +734,18 @@ async function start() {
           return;
         }
 
+        // ── Stealth Mode Toggle ──────────────────────────────────────────
+        if (msg.type === 'stealth') {
+          const enabled = !!msg.enabled;
+          if (enabled) {
+            peerStealth.add(nodeId);
+          } else {
+            peerStealth.delete(nodeId);
+          }
+          broadcastPeers();
+          return;
+        }
+
       } catch (err: any) {
         socket.send(JSON.stringify({ type: 'error', error: `invalid message processing: ${err.message}` }));
       }
@@ -738,6 +755,7 @@ async function start() {
       if (nodeId) {
         peers.delete(nodeId);
         peerNames.delete(nodeId);
+        peerStealth.delete(nodeId);
         server.log.info({ nodeId, totalPeers: peers.size }, 'peer disconnected');
         broadcastPeers();
       }

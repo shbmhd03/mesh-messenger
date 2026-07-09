@@ -37,6 +37,9 @@ export function Sidebar() {
     ownNodeId,
     ownDisplayName,
     setOwnDisplayName,
+    stealthMode,
+    setStealthMode,
+    connectToPeerById,
     meshPanelOpen,
     toggleMeshPanel,
   } = useMeshStore();
@@ -65,9 +68,34 @@ export function Sidebar() {
 
       {/* User Profile Info & Custom Nickname Input */}
       <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255, 255, 255, 0.01)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }}></div>
-          <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>My Profile</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: stealthMode ? 'var(--text-tertiary)' : 'var(--accent)', boxShadow: stealthMode ? 'none' : '0 0 6px var(--accent)' }}></div>
+            <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>My Profile</span>
+          </div>
+          <button
+            onClick={() => setStealthMode(!stealthMode)}
+            style={{
+              padding: '2px 8px',
+              borderRadius: '10px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              background: stealthMode ? 'rgba(255, 255, 255, 0.05)' : 'var(--accent-soft)',
+              color: stealthMode ? 'var(--text-secondary)' : 'var(--accent)',
+              border: '1px solid ' + (stealthMode ? 'var(--border-subtle)' : 'var(--accent)'),
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="Toggle Stealth Mode. When Stealth is ON, you are completely hidden from other peers' online lists."
+            id="stealth-mode-btn"
+          >
+            <svg style={{ width: 10, height: 10 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
+            </svg>
+            {stealthMode ? 'Stealth ON' : 'Stealth OFF'}
+          </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: '4px' }}>
           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--accent)' }}>
@@ -83,6 +111,56 @@ export function Sidebar() {
             id="own-display-name-input"
           />
         </div>
+      </div>
+
+      {/* Connect by Peer ID / Code */}
+      <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255, 255, 255, 0.005)' }}>
+        <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Private Chat Bridge</div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const input = document.getElementById('peer-id-connect-input') as HTMLInputElement;
+            if (input && input.value.trim()) {
+              const success = connectToPeerById(input.value.trim());
+              if (success) input.value = '';
+            }
+          }}
+          style={{ display: 'flex', gap: 'var(--space-2)' }}
+        >
+          <input
+            type="text"
+            id="peer-id-connect-input"
+            placeholder="Enter Unique Peer ID Code..."
+            maxLength={8}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              fontSize: '12px',
+              background: 'var(--bg-overlay)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text-primary)',
+              outline: 'none',
+              fontFamily: 'var(--font-mono)'
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 600,
+              background: 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer'
+            }}
+            id="peer-id-connect-submit-btn"
+          >
+            Connect
+          </button>
+        </form>
       </div>
 
       {/* Mesh Panel (collapsible) */}

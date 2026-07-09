@@ -161,6 +161,14 @@ export class RelayTransport {
     });
   }
 
+  /** Toggle stealth connection state on the server */
+  setStealth(enabled: boolean): void {
+    this.send({
+      type: 'stealth',
+      enabled,
+    });
+  }
+
   /** Get current connection state */
   getState(): ConnectionState {
     return this.state;
