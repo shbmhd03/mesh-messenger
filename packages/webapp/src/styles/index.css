@@ -956,11 +956,23 @@ body {
 
 /* ── Mobile Responsiveness ────────────────────────────────────────────── */
 
+/* Global tap highlight removal for mobile browser fluidity */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .mobile-back-btn {
   display: none;
 }
 
 @media (max-width: 768px) {
+  /* Prevent background stretching issues and account for browser bar dynamic resizing */
+  body, #root, .app-shell {
+    height: 100dvh !important;
+    height: -webkit-fill-available;
+    overflow: hidden;
+  }
+
   .mobile-back-btn {
     display: flex;
     align-items: center;
@@ -984,10 +996,10 @@ body {
     height: 20px;
   }
 
-  /* Split layout override */
+  /* Split layout overrides */
   .sidebar {
     width: 100vw !important;
-    height: 100vh;
+    height: 100dvh !important;
   }
 
   .main-area {
@@ -1002,7 +1014,7 @@ body {
   .app-shell.has-active-chat .main-area {
     display: flex !important;
     width: 100vw !important;
-    height: 100vh;
+    height: 100dvh !important;
     flex-direction: column;
   }
 
@@ -1010,5 +1022,38 @@ body {
   .empty-state {
     padding: var(--space-6);
   }
+
+  /* Enable smooth kinetic scroll physics on iOS and Android list containers */
+  .conversation-list,
+  .messages-container {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Maximize space for message bubbles on narrow mobile screens */
+  .messages-container {
+    padding: var(--space-3) var(--space-3) !important;
+    gap: var(--space-2) !important;
+  }
+
+  .message-group {
+    max-width: 85% !important;
+  }
+
+  /* Adjust chat header height and padding for smaller screens */
+  .chat-header {
+    padding: var(--space-2) var(--space-4) !important;
+    height: var(--header-height) !important;
+  }
+
+  /* Prevent iOS browser form auto-zoom on input element selection */
+  .chat-input-wrapper textarea {
+    font-size: 16px !important;
+  }
+
+  /* Clear iOS home indicator safe area inset nicely at the bottom */
+  .chat-input-container {
+    padding: var(--space-2) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 8px)) !important;
+  }
 }
+
 
