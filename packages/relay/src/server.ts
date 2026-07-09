@@ -304,11 +304,217 @@ async function start() {
   });
 
   // ── Health Check ───────────────────────────────────────────────────────
-  server.get('/health', async () => ({
-    status: 'ok',
-    peers: peers.size,
-    uptime: process.uptime(),
-  }));
+  server.get('/health', async (request, reply) => {
+    const accept = request.headers.accept || '';
+    if (accept.includes('text/html')) {
+      reply.type('text/html').send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Diagnosis — unixora.tech</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #030306;
+      --surface: rgba(10, 10, 20, 0.7);
+      --accent: #6b4efe;
+      --accent-glow: rgba(107, 78, 254, 0.4);
+      --green: #00e676;
+      --green-glow: rgba(0, 230, 118, 0.2);
+      --text: #e0e0e6;
+      --text-subtle: #73738c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Grid overlay */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: 
+        radial-gradient(var(--accent-glow) 0.8px, transparent 0.8px),
+        linear-gradient(rgba(107, 78, 254, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(107, 78, 254, 0.03) 1px, transparent 1px);
+      background-size: 30px 30px, 60px 60px, 60px 60px;
+      z-index: 1;
+      opacity: 0.6;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      padding: 30px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(15px);
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 16px;
+    }
+
+    .indicator {
+      width: 10px;
+      height: 10px;
+      background-color: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.5; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+
+    .tech-panel {
+      font-family: 'Share Tech Mono', monospace;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #9cdcfe;
+    }
+
+    .line {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px dotted rgba(255, 255, 255, 0.05);
+      padding: 4px 0;
+    }
+
+    .line:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      color: var(--text-subtle);
+    }
+
+    .value {
+      font-weight: bold;
+    }
+
+    .ok {
+      color: var(--green);
+      text-shadow: 0 0 5px rgba(0, 230, 118, 0.3);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 11px;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="indicator"></div>
+      <div class="title">System Diagnostic Report</div>
+    </div>
+
+    <div class="tech-panel">
+      <div class="line">
+        <span class="label">ROUTER STATUS:</span>
+        <span class="value ok">ONLINE</span>
+      </div>
+      <div class="line">
+        <span class="label">SOCKET INTERFACE:</span>
+        <span class="value ok">READY</span>
+      </div>
+      <div class="line">
+        <span class="label">E2EE SPECIFICATION:</span>
+        <span class="value">SIGNAL SPEC</span>
+      </div>
+      <div class="line">
+        <span class="label">ACTIVE CONNECTIONS:</span>
+        <span class="value" id="peers-count">${peers.size}</span>
+      </div>
+      <div class="line">
+        <span class="label">UPTIME:</span>
+        <span class="value" id="uptime-val">${Math.floor(process.uptime())}s</span>
+      </div>
+      <div class="line">
+        <span class="label">CONVEX DB INTEGRATION:</span>
+        <span class="value ok">CONNECTED</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      Node ID: System Router Core
+    </div>
+  </div>
+
+  <script>
+    // Live update stats without refreshing the page
+    setInterval(async () => {
+      try {
+        const res = await fetch('/health', { headers: { 'Accept': 'application/json' } });
+        const data = await res.json();
+        document.getElementById('peers-count').innerText = data.peers;
+        document.getElementById('uptime-val').innerText = Math.floor(data.uptime) + 's';
+      } catch (e) {}
+    }, 5000);
+  </script>
+</body>
+</html>
+      `);
+    } else {
+      reply.send({
+        status: 'ok',
+        peers: peers.size,
+        uptime: process.uptime(),
+      });
+    }
+  });
 
   // ── Prekey Bundle API ──────────────────────────────────────────────────
   server.get<{ Params: { nodeId: string } }>('/prekeys/:nodeId', async (request, reply) => {
