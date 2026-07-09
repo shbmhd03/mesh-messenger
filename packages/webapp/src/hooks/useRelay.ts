@@ -13,7 +13,7 @@ export function useRelay() {
 
   const relayUrl = (import.meta as any).env.DEV
     ? 'ws://localhost:4800/mesh'
-    : 'wss://mesh-messenger.onrender.com/mesh';
+    : 'wss://relay.unixora.tech/mesh';
 
   useEffect(() => {
     const transport = new RelayTransport(ownNodeId, relayUrl, {
