@@ -6,9 +6,9 @@ interface DeliveryBadgeProps {
 
 function ClockIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 6 12 12 15 14" />
     </svg>
   );
 }
@@ -24,8 +24,8 @@ function SingleCheckIcon() {
 function DoubleCheckIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="18 6 7 17 2 12" />
-      <polyline points="22 6 11 17" />
+      <polyline points="17 6 8.5 16.5 3 11" />
+      <polyline points="22 6 13.5 16.5" />
     </svg>
   );
 }
@@ -33,7 +33,7 @@ function DoubleCheckIcon() {
 function FailedIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="9" />
       <line x1="15" y1="9" x2="9" y2="15" />
       <line x1="9" y1="9" x2="15" y2="15" />
     </svg>
@@ -42,7 +42,7 @@ function FailedIcon() {
 
 export function DeliveryBadge({ status }: DeliveryBadgeProps) {
   return (
-    <span className={`delivery-badge ${status}`}>
+    <span className={`delivery-badge ${status}`} title={`Status: ${status}`}>
       {status === 'pending' && <ClockIcon />}
       {status === 'sent' && <SingleCheckIcon />}
       {status === 'delivered' && <DoubleCheckIcon />}
@@ -51,3 +51,4 @@ export function DeliveryBadge({ status }: DeliveryBadgeProps) {
     </span>
   );
 }
+

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useMeshStore } from '../../store/meshStore';
 import { Avatar } from '../common/Avatar';
 import { MeshStatus } from '../mesh/MeshStatus';
@@ -25,6 +25,14 @@ function NetworkIcon() {
   );
 }
 
+function SingleCheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 3 }}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 export function Sidebar() {
   const {
     conversations,
@@ -44,126 +52,84 @@ export function Sidebar() {
     toggleMeshPanel,
   } = useMeshStore();
 
-  const filtered = searchQuery
-    ? conversations.filter((c) =>
-        c.contact.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : conversations;
+  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'online' | 'bridge'>('all');
+  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+
+  // Filter conversations according to search and active tab
+  let filtered = conversations;
+
+  if (activeTab === 'unread') {
+    filtered = filtered.filter((c) => c.unread > 0);
+  } else if (activeTab === 'online') {
+    filtered = filtered.filter((c) => c.contact.online);
+  }
+
+  if (searchQuery.trim()) {
+    filtered = filtered.filter((c) =>
+      c.contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.id.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }
+
+  const unreadTotal = conversations.reduce((acc, c) => acc + c.unread, 0);
 
   return (
-    <div className="sidebar">
-      {/* Header */}
+    <div className="sidebar whatsapp-theme">
+      {/* WhatsApp / Telegram Style Sidebar Header */}
       <div className="sidebar-header">
-        <h1>MeshQ</h1>
-        <button
-          className="icon-btn"
-          onClick={toggleMeshPanel}
-          title="Toggle mesh network panel"
-          id="toggle-mesh-panel-btn"
-          style={meshPanelOpen ? { color: 'var(--mesh)', background: 'var(--mesh-soft)' } : {}}
-        >
-          <NetworkIcon />
-        </button>
-      </div>
+        <div className="header-left-profile" onClick={() => setShowProfileDrawer(!showProfileDrawer)} title="Open Profile Settings">
+          <Avatar initials={ownDisplayName.substring(0, 2).toUpperCase()} color="var(--accent)" size="sm" />
+          <span className="header-app-name">MeshQ</span>
+        </div>
 
-      {/* User Profile Info & Custom Nickname Input */}
-      <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255, 255, 255, 0.01)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: stealthMode ? 'var(--text-tertiary)' : 'var(--accent)', boxShadow: stealthMode ? 'none' : '0 0 6px var(--accent)' }}></div>
-            <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>My Profile</span>
-          </div>
+        <div className="sidebar-header-actions">
           <button
             onClick={() => setStealthMode(!stealthMode)}
-            style={{
-              padding: '2px 8px',
-              borderRadius: '10px',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              background: stealthMode ? 'rgba(255, 255, 255, 0.05)' : 'var(--accent-soft)',
-              color: stealthMode ? 'var(--text-secondary)' : 'var(--accent)',
-              border: '1px solid ' + (stealthMode ? 'var(--border-subtle)' : 'var(--accent)'),
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title="Toggle Stealth Mode. When Stealth is ON, you are completely hidden from other peers' online lists."
+            className={`stealth-toggle-pill ${stealthMode ? 'stealth-on' : 'stealth-off'}`}
+            title="Toggle Stealth Mode. When Stealth is ON, you vanish from public peer maps."
             id="stealth-mode-btn"
           >
-            <svg style={{ width: 10, height: 10 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
-            </svg>
+            <span className="stealth-dot"></span>
             {stealthMode ? 'Stealth ON' : 'Stealth OFF'}
           </button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: '4px' }}>
-          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--accent)' }}>
-            ME
-          </div>
-          <input
-            type="text"
-            value={ownDisplayName}
-            onChange={(e) => setOwnDisplayName(e.target.value)}
-            placeholder="Set your name..."
-            style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none', padding: '2px 0' }}
-            title="Edit your nickname. Other peers will see this name on their screens when you chat with them."
-            id="own-display-name-input"
-          />
-        </div>
-      </div>
 
-      {/* Connect by Peer ID / Code */}
-      <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255, 255, 255, 0.005)' }}>
-        <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Private Chat Bridge</div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const input = document.getElementById('peer-id-connect-input') as HTMLInputElement;
-            if (input && input.value.trim()) {
-              const success = connectToPeerById(input.value.trim());
-              if (success) input.value = '';
-            }
-          }}
-          style={{ display: 'flex', gap: 'var(--space-2)' }}
-        >
-          <input
-            type="text"
-            id="peer-id-connect-input"
-            placeholder="Enter Unique Peer ID Code..."
-            maxLength={8}
-            style={{
-              flex: 1,
-              padding: '6px 10px',
-              fontSize: '12px',
-              background: 'var(--bg-overlay)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--text-primary)',
-              outline: 'none',
-              fontFamily: 'var(--font-mono)'
-            }}
-          />
           <button
-            type="submit"
-            style={{
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 600,
-              background: 'var(--accent)',
-              color: 'white',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              cursor: 'pointer'
-            }}
-            id="peer-id-connect-submit-btn"
+            className="icon-btn"
+            onClick={toggleMeshPanel}
+            title="Toggle Mesh Network Topology Map"
+            id="toggle-mesh-panel-btn"
+            style={meshPanelOpen ? { color: 'var(--mesh)', background: 'var(--mesh-soft)' } : {}}
           >
-            Connect
+            <NetworkIcon />
           </button>
-        </form>
+        </div>
       </div>
 
-      {/* Mesh Panel (collapsible) */}
+      {/* User Quick Profile Edit Drawer */}
+      {showProfileDrawer && (
+        <div className="profile-edit-card">
+          <div className="profile-card-header">
+            <span>My Profile & Identity</span>
+            <button className="close-profile-btn" onClick={() => setShowProfileDrawer(false)}>✕</button>
+          </div>
+          <div className="profile-input-row">
+            <label htmlFor="own-display-name-input">Display Name:</label>
+            <input
+              type="text"
+              value={ownDisplayName}
+              onChange={(e) => setOwnDisplayName(e.target.value)}
+              placeholder="Set your name..."
+              id="own-display-name-input"
+            />
+          </div>
+          <div className="profile-id-row">
+            <span>Unique Peer ID Code:</span>
+            <code>{ownNodeId.substring(0, 8)}</code>
+          </div>
+        </div>
+      )}
+
+      {/* Mesh Status Network Topology Drawer */}
       {meshPanelOpen && (
         <div style={{ borderBottom: '1px solid var(--border-subtle)', maxHeight: '50vh', overflowY: 'auto' }}>
           <MeshStatus
@@ -174,63 +140,146 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Search */}
+      {/* WhatsApp Search Bar */}
       <div className="sidebar-search">
-        <input
-          type="text"
-          placeholder="Search conversations..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          id="conversation-search-input"
-        />
+        <div className="search-input-wrapper">
+          <SearchIcon />
+          <input
+            type="text"
+            placeholder="Search or start new chat"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            id="conversation-search-input"
+          />
+          {searchQuery && (
+            <button className="clear-search-btn" onClick={() => setSearchQuery('')}>✕</button>
+          )}
+        </div>
       </div>
 
-      {/* Conversation List */}
-      <div className="conversation-list">
-        {filtered.map((conv, i) => (
-          <div
-            key={conv.id}
-            className={`conversation-item ${conv.id === activeConversationId ? 'active' : ''}`}
-            onClick={() => setActiveConversation(conv.id)}
-            style={{ animationDelay: `${i * 40}ms` }}
-            id={`conversation-${conv.id}`}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && setActiveConversation(conv.id)}
+      {/* WhatsApp / Telegram Filter Tabs */}
+      <div className="sidebar-tabs-bar">
+        <button
+          className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveTab('all')}
+        >
+          All
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'unread' ? 'active' : ''}`}
+          onClick={() => setActiveTab('unread')}
+        >
+          Unread {unreadTotal > 0 && <span className="tab-badge">{unreadTotal}</span>}
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'online' ? 'active' : ''}`}
+          onClick={() => setActiveTab('online')}
+        >
+          Online ({meshNodes.filter((n) => n.hopCount <= 1).length})
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'bridge' ? 'active' : ''}`}
+          onClick={() => setActiveTab('bridge')}
+        >
+          Bridge
+        </button>
+      </div>
+
+      {/* Private Chat Bridge Form (Shown when Bridge tab is active or manually connected) */}
+      {activeTab === 'bridge' && (
+        <div className="private-bridge-box">
+          <div className="bridge-title">Connect by Unique Peer ID</div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const input = document.getElementById('peer-id-connect-input') as HTMLInputElement;
+              if (input && input.value.trim()) {
+                const success = connectToPeerById(input.value.trim());
+                if (success) {
+                  input.value = '';
+                  setActiveTab('all');
+                }
+              }
+            }}
+            className="bridge-form-row"
           >
-            <Avatar
-              initials={conv.contact.initials}
-              color={conv.contact.color}
-              online={conv.contact.online}
+            <input
+              type="text"
+              id="peer-id-connect-input"
+              placeholder="Enter Peer ID (e.g. 97E5F61A)..."
+              maxLength={8}
             />
-            <div className="conversation-info">
-              <div className="conversation-name">{conv.contact.name}</div>
-              <div className="conversation-preview">{conv.lastMessage}</div>
-            </div>
-            <div className="conversation-meta">
-              <span className="conversation-time">{formatTime(conv.lastTime)}</span>
-              {conv.unread > 0 && (
-                <span className="unread-badge">{conv.unread}</span>
-              )}
-            </div>
+            <button type="submit" id="peer-id-connect-submit-btn">
+              Connect
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* WhatsApp / Telegram Conversation List */}
+      <div className="conversation-list">
+        {filtered.length === 0 ? (
+          <div className="no-chats-placeholder">
+            <p>No conversations found</p>
+            {activeTab === 'bridge' ? (
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Enter a 8-character Peer ID to connect</span>
+            ) : (
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Waiting for peers to join network...</span>
+            )}
           </div>
-        ))}
+        ) : (
+          filtered.map((conv, i) => (
+            <div
+              key={conv.id}
+              className={`conversation-item ${conv.id === activeConversationId ? 'active' : ''}`}
+              onClick={() => setActiveConversation(conv.id)}
+              style={{ animationDelay: `${i * 30}ms` }}
+              id={`conversation-${conv.id}`}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setActiveConversation(conv.id)}
+            >
+              <Avatar
+                initials={conv.contact.initials}
+                color={conv.contact.color}
+                online={conv.contact.online}
+              />
+
+              <div className="conversation-info">
+                <div className="conversation-name-row">
+                  <span className="conversation-name">{conv.contact.name}</span>
+                  {conv.contact.verified && (
+                    <span className="mini-verified-icon" title="Verified Contact Key">✓</span>
+                  )}
+                </div>
+                <div className="conversation-preview">
+                  {conv.messages.length > 0 && conv.messages[conv.messages.length - 1].sent && (
+                    <SingleCheckIcon />
+                  )}
+                  <span>{conv.lastMessage || 'Connected'}</span>
+                </div>
+              </div>
+
+              <div className="conversation-meta">
+                <span className="conversation-time">{formatTime(conv.lastTime)}</span>
+                {conv.unread > 0 && (
+                  <span className="unread-badge">{conv.unread}</span>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Mesh Status Bar */}
+      {/* WhatsApp Bottom Network Bar */}
       <div className="mesh-status-bar">
         <div className="mesh-indicator">
           <span className={`mesh-dot ${relayConnected ? 'connected' : 'disconnected'}`} />
-          <span>Relay</span>
+          <span>{relayConnected ? 'Relay Active' : 'Connecting...'}</span>
         </div>
         <div className="mesh-indicator">
           <span className="mesh-dot connected" />
-          <span>{meshNodes.filter((n) => n.hopCount <= 1).length} peers</span>
-        </div>
-        <div className="mesh-indicator" style={{ marginLeft: 'auto' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-            {ownNodeId.substring(0, 8)}
-          </span>
+          <span>{meshNodes.filter((n) => n.hopCount <= 1).length} peers online</span>
         </div>
       </div>
     </div>

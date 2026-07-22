@@ -198,6 +198,7 @@ async function start() {
       letter-spacing: -0.5px;
       background: linear-gradient(135deg, #ffffff 0%, #a29bfe 100%);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       margin-bottom: 8px;
     }

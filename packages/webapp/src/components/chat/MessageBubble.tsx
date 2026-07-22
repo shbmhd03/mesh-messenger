@@ -14,21 +14,33 @@ interface MessageBubbleProps {
 export function MessageBubble({ text, sent, timestamp, status, transport, animDelay = 0 }: MessageBubbleProps) {
   return (
     <div
-      className={`message-group ${sent ? 'sent' : 'received'}`}
+      className={`message-row ${sent ? 'sent' : 'received'}`}
       style={{ animationDelay: `${animDelay}ms` }}
     >
       <div className={`message-bubble ${sent ? 'sent' : 'received'}`}>
-        {text}
-      </div>
-      <div className="message-footer">
-        {transport && (
-          <span className={`mesh-node-transport ${transport}`} style={{ fontSize: '10px' }}>
-            {transport.toUpperCase()}
-          </span>
-        )}
-        <span className="message-time">{formatMessageTime(timestamp)}</span>
-        {sent && <DeliveryBadge status={status} />}
+        {/* Tail SVG */}
+        <svg className={`bubble-tail ${sent ? 'sent' : 'received'}`} viewBox="0 0 8 13" width="8" height="13">
+          {sent ? (
+            <path d="M0,0 C3,0 8,4 8,8 C8,10 6,13 0,13 L0,0 Z" fill="currentColor" />
+          ) : (
+            <path d="M8,0 C5,0 0,4 0,8 C0,10 2,13 8,13 L8,0 Z" fill="currentColor" />
+          )}
+        </svg>
+
+        <span className="message-content-text">{text}</span>
+        
+        {/* In-bubble WhatsApp/Telegram style timestamp & delivery badge */}
+        <span className="message-meta-inline">
+          {transport && (
+            <span className={`mesh-node-transport-pill ${transport}`}>
+              {transport.toUpperCase()}
+            </span>
+          )}
+          <span className="message-time">{formatMessageTime(timestamp)}</span>
+          {sent && <DeliveryBadge status={status} />}
+        </span>
       </div>
     </div>
   );
 }
+
