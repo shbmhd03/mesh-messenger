@@ -9,9 +9,10 @@ interface MessageBubbleProps {
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   transport?: string;
   animDelay?: number;
+  senderName?: string;
 }
 
-export function MessageBubble({ text, sent, timestamp, status, transport, animDelay = 0 }: MessageBubbleProps) {
+export function MessageBubble({ text, sent, timestamp, status, transport, animDelay = 0, senderName }: MessageBubbleProps) {
   return (
     <div
       className={`message-row ${sent ? 'sent' : 'received'}`}
@@ -26,6 +27,10 @@ export function MessageBubble({ text, sent, timestamp, status, transport, animDe
             <path d="M8,0 C5,0 0,4 0,8 C0,10 2,13 8,13 L8,0 Z" fill="currentColor" />
           )}
         </svg>
+
+        {!sent && senderName && (
+          <div className="group-sender-header">{senderName}</div>
+        )}
 
         <span className="message-content-text">{text}</span>
         

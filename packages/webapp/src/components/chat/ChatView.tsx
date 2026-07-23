@@ -4,6 +4,7 @@ import { Avatar } from '../common/Avatar';
 import { SafetyNumber } from '../common/SafetyNumber';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
+import { GroupInfoDrawer } from '../group/GroupInfoDrawer';
 
 function ShieldIcon() {
   return (
@@ -59,7 +60,8 @@ export function ChatView() {
   const {
     conversations, activeConversationId, sendMessage,
     safetyNumberContactId, showSafetyNumber, verifyContact,
-    setActiveConversation, sendChatRequest, acceptChatRequest, declineChatRequest
+    setActiveConversation, sendChatRequest, acceptChatRequest, declineChatRequest,
+    groupInfoDrawerOpen, setGroupInfoDrawerOpen
   } = useMeshStore();
 
   const [activeCallType, setActiveCallType] = useState<'voice' | 'video' | null>(null);
@@ -140,27 +142,60 @@ export function ChatView() {
         </button>
 
         <Avatar
-          initials={contact.initials}
+          initials={conversation.isGroup ? '👥' : contact.initials}
           color={contact.color}
           size="sm"
           online={contact.online}
         />
 
-        <div className="chat-header-info">
-          <div className="chat-header-name">{contact.name}</div>
+        <div
+          className="chat-header-info"
+          onClick={() => conversation.isGroup && setGroupInfoDrawerOpen(true)}
+          style={{ cursor: conversation.isGroup ? 'pointer' : 'default' }}
+        >
+          <div className="chat-header-name">
+            {conversation.isGroup ? (conversation.groupName || contact.name) : contact.name}
+          </div>
           <div className="chat-header-status">
-            <span
-              className={`mesh-dot ${contact.online ? 'connected' : 'disconnected'}`}
-              style={{ width: 6, height: 6 }}
-            />
-            {contact.online
-              ? `online — ${contact.hopCount === 0 ? 'Direct' : `${contact.hopCount} hops`} (${contact.transport.toUpperCase()})`
-              : 'offline — queued via Convex cloud'}
+            {conversation.isGroup ? (
+              <span>
+                {conversation.members?.length || 0} members
+                {conversation.members && conversation.members.length > 0 && (
+                  `: ${conversation.members.map((m) => m.name).slice(0, 3).join(', ')}${conversation.members.length > 3 ? '...' : ''}`
+                )}
+              </span>
+            ) : (
+              <>
+                <span
+                  className={`mesh-dot ${contact.online ? 'connected' : 'disconnected'}`}
+                  style={{ width: 6, height: 6 }}
+                />
+                {contact.online
+                  ? `online — ${contact.hopCount === 0 ? 'Direct' : `${contact.hopCount} hops`} (${contact.transport.toUpperCase()})`
+                  : 'offline — queued via Convex cloud'}
+              </>
+            )}
           </div>
         </div>
 
         {/* WhatsApp Header Action Buttons */}
         <div className="chat-header-actions">
+          {conversation.isGroup && (
+            <button
+              className="icon-btn"
+              title="Group Info & Member Management"
+              onClick={() => setGroupInfoDrawerOpen(true)}
+              id="group-info-btn"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </button>
+          )}
+
           <button
             className="icon-btn"
             title="Start Encrypted Voice Call"
@@ -198,15 +233,17 @@ export function ChatView() {
             </span>
           )}
 
-          <button
-            className="icon-btn"
-            title="Verify safety number key"
-            id="verify-safety-number-btn"
-            onClick={() => showSafetyNumber(contact.id)}
-            style={contact.verified ? { color: 'var(--success)' } : {}}
-          >
-            <ShieldIcon />
-          </button>
+          {!conversation.isGroup && (
+            <button
+              className="icon-btn"
+              title="Verify safety number key"
+              id="verify-safety-number-btn"
+              onClick={() => showSafetyNumber(contact.id)}
+              style={contact.verified ? { color: 'var(--success)' } : {}}
+            >
+              <ShieldIcon />
+            </button>
+          )}
         </div>
       </div>
 
@@ -343,6 +380,7 @@ export function ChatView() {
                 status={msg.status}
                 transport={msg.transport}
                 animDelay={i * 20}
+                senderName={msg.senderName}
               />
             ))}
             <div ref={messagesEndRef} />
@@ -363,6 +401,13 @@ export function ChatView() {
           onClose={() => showSafetyNumber(null)}
         />
       )}
+
+      {/* Group Info & Admin Management Drawer */}
+      <GroupInfoDrawer
+        conversation={conversation}
+        isOpen={groupInfoDrawerOpen}
+        onClose={() => setGroupInfoDrawerOpen(false)}
+      />
     </div>
   );
 }

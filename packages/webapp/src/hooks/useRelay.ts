@@ -86,6 +86,9 @@ export function useRelay() {
                 } else if (payload.type === 'chat_accept') {
                   // Handle incoming acceptance response from stealth node
                   useMeshStore.getState().handleIncomingChatAccept(fromNodeId);
+                } else if (payload.type === 'group_msg' || payload.type === 'group_invite' || payload.type === 'group_update') {
+                  // Handle incoming group chat packets
+                  useMeshStore.getState().handleIncomingGroupPacket(fromNodeId, payload);
                 }
                 return;
               }

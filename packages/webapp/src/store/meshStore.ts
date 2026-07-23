@@ -26,6 +26,13 @@ export interface Message {
   timestamp: number;
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   transport?: 'ble' | 'wifi' | 'relay' | 'webrtc';
+  senderName?: string;
+}
+
+export interface GroupMember {
+  nodeId: string;
+  name: string;
+  role: 'admin' | 'member';
 }
 
 export interface Conversation {
@@ -35,6 +42,12 @@ export interface Conversation {
   lastMessage: string;
   lastTime: number;
   unread: number;
+  // Group properties
+  isGroup?: boolean;
+  groupName?: string;
+  groupDescription?: string;
+  groupAdminId?: string;
+  members?: GroupMember[];
 }
 
 export interface MeshNode {
@@ -64,6 +77,15 @@ interface MeshState {
   meshPanelOpen: boolean;
   safetyNumberContactId: string | null;
 
+  // Modals & Drawers
+  qrModalOpen: boolean;
+  createGroupModalOpen: boolean;
+  groupInfoDrawerOpen: boolean;
+
+  setQrModalOpen: (open: boolean) => void;
+  setCreateGroupModalOpen: (open: boolean) => void;
+  setGroupInfoDrawerOpen: (open: boolean) => void;
+
   // Registered socket sender callback
   sendPacketHandler: ((destNodeId: string, text: string) => void) | null;
 
@@ -86,6 +108,14 @@ interface MeshState {
   toggleMeshPanel: () => void;
   showSafetyNumber: (contactId: string | null) => void;
   verifyContact: (contactId: string) => void;
+
+  // Group Chat Actions
+  createGroup: (name: string, description: string, selectedContactIds: string[]) => string;
+  addGroupMember: (groupId: string, contactIdOrNodeId: string) => void;
+  removeGroupMember: (groupId: string, memberNodeId: string) => void;
+  toggleGroupAdmin: (groupId: string, memberNodeId: string) => void;
+  leaveGroup: (groupId: string) => void;
+  handleIncomingGroupPacket: (fromNodeId: string, payload: any) => void;
 }
 
 // Generate a deterministic color based on NodeID string
@@ -192,6 +222,14 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   relayConnected: false,
   meshPanelOpen: false,
   safetyNumberContactId: null,
+
+  qrModalOpen: false,
+  createGroupModalOpen: false,
+  groupInfoDrawerOpen: false,
+
+  setQrModalOpen: (open) => set({ qrModalOpen: open }),
+  setCreateGroupModalOpen: (open) => set({ createGroupModalOpen: open }),
+  setGroupInfoDrawerOpen: (open) => set({ groupInfoDrawerOpen: open }),
 
   sendPacketHandler: null,
 
@@ -429,15 +467,35 @@ export const useMeshStore = create<MeshState>((set, get) => ({
 
     // Trigger physical WebSocket packet send via registered handler
     const handler = get().sendPacketHandler;
-    if (handler) {
-      // Include own nickname so recipient can instantly resolve NodeID to your actual name
-      const payload = JSON.stringify({
-        type: 'msg',
-        id: messageId,
-        text: text.trim(),
-        senderName: get().ownDisplayName
-      });
-      handler(conversationId, payload);
+    const conv = get().conversations.find((c) => c.id === conversationId);
+
+    if (handler && conv) {
+      if (conv.isGroup && conv.members) {
+        const payload = JSON.stringify({
+          type: 'group_msg',
+          groupId: conversationId,
+          groupName: conv.groupName || conv.contact.name,
+          id: messageId,
+          text: text.trim(),
+          senderName: get().ownDisplayName,
+          senderId: get().ownNodeId,
+        });
+        conv.members.forEach((m) => {
+          if (m.nodeId !== get().ownNodeId) {
+            try {
+              handler(m.nodeId, payload);
+            } catch (e) {}
+          }
+        });
+      } else {
+        const payload = JSON.stringify({
+          type: 'msg',
+          id: messageId,
+          text: text.trim(),
+          senderName: get().ownDisplayName,
+        });
+        handler(conversationId, payload);
+      }
     }
   },
 
@@ -668,6 +726,352 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         : conv
     ),
   })),
+
+  // Group Chat Actions Implementation
+  createGroup: (name, description, selectedContactIds) => {
+    const state = get();
+    const groupId = `group-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+    const creatorMember: GroupMember = {
+      nodeId: state.ownNodeId,
+      name: state.ownDisplayName,
+      role: 'admin',
+    };
+
+    const contactMembers: GroupMember[] = selectedContactIds.map((cid) => {
+      const c = state.contacts.find((contact) => contact.id === cid);
+      return {
+        nodeId: c ? c.nodeId : cid,
+        name: c ? c.name : `Node ${cid.substring(0, 8)}`,
+        role: 'member',
+      };
+    });
+
+    const members = [creatorMember, ...contactMembers];
+
+    const groupContact: Contact = {
+      id: groupId,
+      nodeId: groupId,
+      name,
+      initials: name.substring(0, 2).toUpperCase(),
+      color: getDeterministicColor(groupId),
+      online: true,
+      hopCount: 1,
+      transport: 'relay',
+      verified: true,
+    };
+
+    const groupConv: Conversation = {
+      id: groupId,
+      contact: groupContact,
+      messages: [
+        {
+          id: `m-init-${Date.now()}`,
+          conversationId: groupId,
+          text: `Group "${name}" created.`,
+          sent: true,
+          timestamp: Date.now(),
+          status: 'read',
+        },
+      ],
+      lastMessage: `Group "${name}" created.`,
+      lastTime: Date.now(),
+      unread: 0,
+      isGroup: true,
+      groupName: name,
+      groupDescription: description,
+      groupAdminId: state.ownNodeId,
+      members,
+    };
+
+    set((prev) => ({
+      conversations: [groupConv, ...prev.conversations],
+    }));
+
+    if (state.sendPacketHandler) {
+      const payload = JSON.stringify({
+        type: 'group_invite',
+        groupId,
+        groupName: name,
+        groupDescription: description,
+        groupAdminId: state.ownNodeId,
+        members,
+        createdBy: state.ownDisplayName,
+      });
+
+      contactMembers.forEach((m) => {
+        try {
+          state.sendPacketHandler!(m.nodeId, payload);
+        } catch (e) {}
+      });
+    }
+
+    return groupId;
+  },
+
+  addGroupMember: (groupId, contactIdOrNodeId) => {
+    const state = get();
+    const conv = state.conversations.find((c) => c.id === groupId);
+    if (!conv || !conv.isGroup) return;
+
+    const contact = state.contacts.find((c) => c.id === contactIdOrNodeId);
+    const targetNodeId = contact ? contact.nodeId : contactIdOrNodeId.trim();
+    const targetName = contact ? contact.name : `Node ${targetNodeId.substring(0, 8)}`;
+
+    if (conv.members?.some((m) => m.nodeId === targetNodeId)) return;
+
+    const newMember: GroupMember = {
+      nodeId: targetNodeId,
+      name: targetName,
+      role: 'member',
+    };
+
+    const updatedMembers = [...(conv.members || []), newMember];
+
+    set((prev) => ({
+      conversations: prev.conversations.map((c) =>
+        c.id === groupId ? { ...c, members: updatedMembers } : c
+      ),
+    }));
+
+    if (state.sendPacketHandler) {
+      const invitePayload = JSON.stringify({
+        type: 'group_invite',
+        groupId: conv.id,
+        groupName: conv.groupName || conv.contact.name,
+        groupDescription: conv.groupDescription,
+        groupAdminId: conv.groupAdminId,
+        members: updatedMembers,
+        createdBy: state.ownDisplayName,
+      });
+      try {
+        state.sendPacketHandler(targetNodeId, invitePayload);
+      } catch (e) {}
+
+      const updatePayload = JSON.stringify({
+        type: 'group_update',
+        groupId: conv.id,
+        members: updatedMembers,
+      });
+      updatedMembers.forEach((m) => {
+        if (m.nodeId !== state.ownNodeId && m.nodeId !== targetNodeId) {
+          try {
+            state.sendPacketHandler!(m.nodeId, updatePayload);
+          } catch (e) {}
+        }
+      });
+    }
+  },
+
+  removeGroupMember: (groupId, memberNodeId) => {
+    const state = get();
+    const conv = state.conversations.find((c) => c.id === groupId);
+    if (!conv || !conv.isGroup) return;
+
+    const updatedMembers = (conv.members || []).filter((m) => m.nodeId !== memberNodeId);
+
+    set((prev) => ({
+      conversations: prev.conversations.map((c) =>
+        c.id === groupId ? { ...c, members: updatedMembers } : c
+      ),
+    }));
+
+    if (state.sendPacketHandler) {
+      const payload = JSON.stringify({
+        type: 'group_update',
+        groupId,
+        members: updatedMembers,
+      });
+
+      (conv.members || []).forEach((m) => {
+        if (m.nodeId !== state.ownNodeId) {
+          try {
+            state.sendPacketHandler!(m.nodeId, payload);
+          } catch (e) {}
+        }
+      });
+    }
+  },
+
+  toggleGroupAdmin: (groupId, memberNodeId) => {
+    const state = get();
+    const conv = state.conversations.find((c) => c.id === groupId);
+    if (!conv || !conv.isGroup) return;
+
+    const updatedMembers = (conv.members || []).map((m) =>
+      m.nodeId === memberNodeId ? { ...m, role: (m.role === 'admin' ? 'member' : 'admin') as 'admin' | 'member' } : m
+    );
+
+    set((prev) => ({
+      conversations: prev.conversations.map((c) =>
+        c.id === groupId ? { ...c, members: updatedMembers } : c
+      ),
+    }));
+
+    if (state.sendPacketHandler) {
+      const payload = JSON.stringify({
+        type: 'group_update',
+        groupId,
+        members: updatedMembers,
+      });
+
+      updatedMembers.forEach((m) => {
+        if (m.nodeId !== state.ownNodeId) {
+          try {
+            state.sendPacketHandler!(m.nodeId, payload);
+          } catch (e) {}
+        }
+      });
+    }
+  },
+
+  leaveGroup: (groupId) => {
+    const state = get();
+    const conv = state.conversations.find((c) => c.id === groupId);
+    if (conv && conv.members && state.sendPacketHandler) {
+      const updatedMembers = conv.members.filter((m) => m.nodeId !== state.ownNodeId);
+      const payload = JSON.stringify({
+        type: 'group_update',
+        groupId,
+        members: updatedMembers,
+      });
+
+      updatedMembers.forEach((m) => {
+        try {
+          state.sendPacketHandler!(m.nodeId, payload);
+        } catch (e) {}
+      });
+    }
+
+    set((prev) => ({
+      conversations: prev.conversations.filter((c) => c.id !== groupId),
+      activeConversationId: prev.activeConversationId === groupId ? null : prev.activeConversationId,
+    }));
+  },
+
+  handleIncomingGroupPacket: (fromNodeId, payload) => {
+    const state = get();
+    if (!payload || !payload.type) return;
+
+    if (payload.type === 'group_msg') {
+      const { groupId, groupName, id, text, senderName, senderId } = payload;
+      let conv = state.conversations.find((c) => c.id === groupId);
+
+      const newMessage: Message = {
+        id: id || `m-${Date.now()}`,
+        conversationId: groupId,
+        text: text.trim(),
+        sent: false,
+        timestamp: Date.now(),
+        status: state.activeConversationId === groupId ? 'read' : 'delivered',
+        senderName: senderName || `Node ${senderId?.substring(0, 8)}`,
+      };
+
+      if (!conv) {
+        const groupContact: Contact = {
+          id: groupId,
+          nodeId: groupId,
+          name: groupName || 'Group Chat',
+          initials: (groupName || 'GC').substring(0, 2).toUpperCase(),
+          color: getDeterministicColor(groupId),
+          online: true,
+          hopCount: 1,
+          transport: 'relay',
+          verified: true,
+        };
+
+        const newGroupConv: Conversation = {
+          id: groupId,
+          contact: groupContact,
+          messages: [newMessage],
+          lastMessage: `${senderName}: ${text.trim()}`,
+          lastTime: Date.now(),
+          unread: state.activeConversationId === groupId ? 0 : 1,
+          isGroup: true,
+          groupName: groupName || 'Group Chat',
+          members: [
+            { nodeId: state.ownNodeId, name: state.ownDisplayName, role: 'member' },
+            { nodeId: senderId || fromNodeId, name: senderName || `Node ${fromNodeId.substring(0, 8)}`, role: 'member' },
+          ],
+        };
+
+        set((prev) => ({
+          conversations: [newGroupConv, ...prev.conversations],
+        }));
+      } else {
+        set((prev) => ({
+          conversations: prev.conversations.map((c) =>
+            c.id === groupId
+              ? {
+                  ...c,
+                  messages: [...c.messages, newMessage],
+                  lastMessage: `${senderName}: ${text.trim()}`,
+                  lastTime: Date.now(),
+                  unread: state.activeConversationId === groupId ? 0 : c.unread + 1,
+                }
+              : c
+          ),
+        }));
+      }
+    } else if (payload.type === 'group_invite') {
+      const { groupId, groupName, groupDescription, groupAdminId, members, createdBy } = payload;
+      let conv = state.conversations.find((c) => c.id === groupId);
+
+      if (!conv) {
+        const groupContact: Contact = {
+          id: groupId,
+          nodeId: groupId,
+          name: groupName,
+          initials: groupName.substring(0, 2).toUpperCase(),
+          color: getDeterministicColor(groupId),
+          online: true,
+          hopCount: 1,
+          transport: 'relay',
+          verified: true,
+        };
+
+        const newConv: Conversation = {
+          id: groupId,
+          contact: groupContact,
+          messages: [
+            {
+              id: `m-invite-${Date.now()}`,
+              conversationId: groupId,
+              text: `Added to group "${groupName}" by ${createdBy || 'Admin'}.`,
+              sent: false,
+              timestamp: Date.now(),
+              status: 'read',
+            },
+          ],
+          lastMessage: `Added to group by ${createdBy || 'Admin'}.`,
+          lastTime: Date.now(),
+          unread: 1,
+          isGroup: true,
+          groupName,
+          groupDescription,
+          groupAdminId,
+          members,
+        };
+
+        set((prev) => ({
+          conversations: [newConv, ...prev.conversations],
+        }));
+      } else {
+        set((prev) => ({
+          conversations: prev.conversations.map((c) =>
+            c.id === groupId ? { ...c, members, groupName, groupDescription, groupAdminId } : c
+          ),
+        }));
+      }
+    } else if (payload.type === 'group_update') {
+      const { groupId, members } = payload;
+      set((prev) => ({
+        conversations: prev.conversations.map((c) =>
+          c.id === groupId ? { ...c, members } : c
+        ),
+      }));
+    }
+  },
 }));
 
 // Subscribe to automatically sync state changes to localStorage across tab reloads

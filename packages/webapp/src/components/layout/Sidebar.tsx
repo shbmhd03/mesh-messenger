@@ -3,6 +3,8 @@ import { useMeshStore } from '../../store/meshStore';
 import { Avatar } from '../common/Avatar';
 import { MeshStatus } from '../mesh/MeshStatus';
 import { formatTime } from '../../lib/demo';
+import { QRCodeModal } from '../qr/QRCodeModal';
+import { CreateGroupModal } from '../group/CreateGroupModal';
 
 function SearchIcon() {
   return (
@@ -50,6 +52,10 @@ export function Sidebar() {
     connectToPeerById,
     meshPanelOpen,
     toggleMeshPanel,
+    qrModalOpen,
+    setQrModalOpen,
+    createGroupModalOpen,
+    setCreateGroupModalOpen,
   } = useMeshStore();
 
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'online' | 'bridge'>('all');
@@ -83,6 +89,34 @@ export function Sidebar() {
         </div>
 
         <div className="sidebar-header-actions">
+          <button
+            className="icon-btn"
+            onClick={() => setQrModalOpen(true)}
+            title="My QR Code & Scan Peer QR Code"
+            id="qr-code-btn"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </button>
+
+          <button
+            className="icon-btn"
+            onClick={() => setCreateGroupModalOpen(true)}
+            title="Create New Group Chat"
+            id="create-group-btn"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </button>
+
           <button
             onClick={() => setStealthMode(!stealthMode)}
             className={`stealth-toggle-pill ${stealthMode ? 'stealth-on' : 'stealth-off'}`}
@@ -282,6 +316,12 @@ export function Sidebar() {
           <span>{meshNodes.filter((n) => n.hopCount <= 1).length} peers online</span>
         </div>
       </div>
+
+      {/* QR Code Invite & Scanner Modal */}
+      <QRCodeModal isOpen={qrModalOpen} onClose={() => setQrModalOpen(false)} />
+
+      {/* Create New Group Modal */}
+      <CreateGroupModal isOpen={createGroupModalOpen} onClose={() => setCreateGroupModalOpen(false)} />
     </div>
   );
 }
