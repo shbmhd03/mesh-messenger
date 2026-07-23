@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌐 MeshQ — Mesh Messenger
+# 🌐 MeshQ - Mesh Messenger
 
 **Decentralized, Offline-First, End-to-End Encrypted Mesh Communication Platform**
 
