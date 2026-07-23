@@ -92,6 +92,9 @@ export function useRelay() {
                 } else if (payload.type === 'delete_msg') {
                   // Handle incoming message deletion packet
                   useMeshStore.getState().handleIncomingDeletePacket(fromNodeId, payload.conversationId, payload.messageId);
+                } else if (payload.type.startsWith('call_')) {
+                  // Handle incoming WebRTC P2P Voice and Video Call packets
+                  useMeshStore.getState().handleCallPacket(fromNodeId, payload);
                 }
                 return;
               }

@@ -4,6 +4,28 @@
  */
 
 import { create } from 'zustand';
+import { WebRTCManager, type CallType } from '../lib/webrtc';
+
+export interface IncomingCall {
+  callId: string;
+  callerNodeId: string;
+  callerName: string;
+  callType: CallType;
+  sdp: RTCSessionDescriptionInit;
+}
+
+export interface ActiveCall {
+  callId: string;
+  peerNodeId: string;
+  peerName: string;
+  callType: CallType;
+  status: 'ringing' | 'connected';
+  isMuted: boolean;
+  isCameraOff: boolean;
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  webrtcManager: WebRTCManager | null;
+}
 
 export interface Contact {
   id: string;
@@ -124,6 +146,17 @@ interface MeshState {
   toggleGroupAdmin: (groupId: string, memberNodeId: string) => void;
   leaveGroup: (groupId: string) => void;
   handleIncomingGroupPacket: (fromNodeId: string, payload: any) => void;
+
+  // WebRTC Calling State & Actions
+  incomingCall: IncomingCall | null;
+  activeCall: ActiveCall | null;
+  startCall: (peerNodeId: string, callType: CallType) => Promise<void>;
+  acceptCall: () => Promise<void>;
+  rejectCall: () => void;
+  endCall: () => void;
+  toggleCallMute: () => void;
+  toggleCallCamera: () => void;
+  handleCallPacket: (fromNodeId: string, payload: any) => void;
 }
 
 // Generate a deterministic color based on NodeID string
@@ -1186,6 +1219,212 @@ export const useMeshStore = create<MeshState>((set, get) => ({
           c.id === groupId ? { ...c, members } : c
         ),
       }));
+    }
+  },
+
+  // ── WebRTC Live Calling Actions ────────────────────────────────────────
+
+  incomingCall: null,
+  activeCall: null,
+
+  startCall: async (peerNodeId: string, callType: CallType) => {
+    const { contacts, sendPacketHandler } = get();
+    const contact = contacts.find((c) => c.nodeId === peerNodeId || c.id === peerNodeId);
+    const peerName = contact ? contact.name : `Node ${peerNodeId.substring(0, 8)}`;
+    const callId = `call_${Date.now()}`;
+
+    const manager = new WebRTCManager({
+      onIceCandidate: (candidate) => {
+        if (sendPacketHandler) {
+          sendPacketHandler(peerNodeId, JSON.stringify({ type: 'call_ice', callId, candidate }));
+        }
+      },
+      onRemoteStream: (stream) => {
+        set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, remoteStream: stream, status: 'connected' } } : {});
+      },
+      onConnectionStateChange: (state) => {
+        if (state === 'connected') {
+          set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, status: 'connected' } } : {});
+        } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+          get().endCall();
+        }
+      },
+      onError: () => {
+        get().endCall();
+      },
+    });
+
+    try {
+      const localStream = await manager.getLocalStream(callType);
+      const offerSdp = await manager.createOffer(callType);
+
+      set({
+        activeCall: {
+          callId,
+          peerNodeId,
+          peerName,
+          callType,
+          status: 'ringing',
+          isMuted: false,
+          isCameraOff: false,
+          localStream,
+          remoteStream: null,
+          webrtcManager: manager,
+        },
+      });
+
+      if (sendPacketHandler) {
+        sendPacketHandler(
+          peerNodeId,
+          JSON.stringify({
+            type: 'call_offer',
+            callId,
+            callType,
+            sdp: offerSdp,
+            callerName: get().ownDisplayName,
+          })
+        );
+      }
+    } catch (err: any) {
+      manager.close();
+      alert(err.message || 'Could not start call. Please check microphone/camera permissions.');
+    }
+  },
+
+  acceptCall: async () => {
+    const { incomingCall, sendPacketHandler } = get();
+    if (!incomingCall) return;
+
+    const { callId, callerNodeId, callerName, callType, sdp: offerSdp } = incomingCall;
+    set({ incomingCall: null });
+
+    const manager = new WebRTCManager({
+      onIceCandidate: (candidate) => {
+        if (sendPacketHandler) {
+          sendPacketHandler(callerNodeId, JSON.stringify({ type: 'call_ice', callId, candidate }));
+        }
+      },
+      onRemoteStream: (stream) => {
+        set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, remoteStream: stream, status: 'connected' } } : {});
+      },
+      onConnectionStateChange: (state) => {
+        if (state === 'connected') {
+          set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, status: 'connected' } } : {});
+        } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+          get().endCall();
+        }
+      },
+      onError: () => {
+        get().endCall();
+      },
+    });
+
+    try {
+      const localStream = await manager.getLocalStream(callType);
+      const answerSdp = await manager.createAnswer(offerSdp, callType);
+
+      set({
+        activeCall: {
+          callId,
+          peerNodeId: callerNodeId,
+          peerName: callerName,
+          callType,
+          status: 'connected',
+          isMuted: false,
+          isCameraOff: false,
+          localStream,
+          remoteStream: null,
+          webrtcManager: manager,
+        },
+      });
+
+      if (sendPacketHandler) {
+        sendPacketHandler(callerNodeId, JSON.stringify({ type: 'call_answer', callId, sdp: answerSdp }));
+      }
+    } catch (err: any) {
+      manager.close();
+      alert('Could not accept call. Check media permissions.');
+    }
+  },
+
+  rejectCall: () => {
+    const { incomingCall, sendPacketHandler } = get();
+    if (incomingCall) {
+      if (sendPacketHandler) {
+        sendPacketHandler(incomingCall.callerNodeId, JSON.stringify({ type: 'call_reject', callId: incomingCall.callId }));
+      }
+      set({ incomingCall: null });
+    }
+  },
+
+  endCall: () => {
+    const { activeCall, sendPacketHandler } = get();
+    if (activeCall) {
+      if (activeCall.webrtcManager) {
+        activeCall.webrtcManager.close();
+      }
+      if (sendPacketHandler) {
+        sendPacketHandler(activeCall.peerNodeId, JSON.stringify({ type: 'call_end', callId: activeCall.callId }));
+      }
+      set({ activeCall: null });
+    }
+  },
+
+  toggleCallMute: () => {
+    const { activeCall } = get();
+    if (!activeCall || !activeCall.webrtcManager) return;
+    const newMuted = !activeCall.isMuted;
+    activeCall.webrtcManager.toggleMute(newMuted);
+    set({ activeCall: { ...activeCall, isMuted: newMuted } });
+  },
+
+  toggleCallCamera: () => {
+    const { activeCall } = get();
+    if (!activeCall || !activeCall.webrtcManager) return;
+    const newCameraOff = !activeCall.isCameraOff;
+    activeCall.webrtcManager.toggleCamera(newCameraOff);
+    set({ activeCall: { ...activeCall, isCameraOff: newCameraOff } });
+  },
+
+  handleCallPacket: (fromNodeId: string, payload: any) => {
+    const { activeCall, incomingCall } = get();
+
+    if (payload.type === 'call_offer') {
+      if (activeCall || incomingCall) {
+        const { sendPacketHandler } = get();
+        if (sendPacketHandler) {
+          sendPacketHandler(fromNodeId, JSON.stringify({ type: 'call_reject', callId: payload.callId, reason: 'busy' }));
+        }
+        return;
+      }
+      set({
+        incomingCall: {
+          callId: payload.callId,
+          callerNodeId: fromNodeId,
+          callerName: payload.callerName || `Node ${fromNodeId.substring(0, 8)}`,
+          callType: payload.callType || 'voice',
+          sdp: payload.sdp,
+        },
+      });
+    } else if (payload.type === 'call_answer') {
+      if (activeCall && activeCall.callId === payload.callId && activeCall.webrtcManager) {
+        activeCall.webrtcManager.handleAnswer(payload.sdp);
+        set({ activeCall: { ...activeCall, status: 'connected' } });
+      }
+    } else if (payload.type === 'call_ice') {
+      if (activeCall && activeCall.callId === payload.callId && activeCall.webrtcManager) {
+        activeCall.webrtcManager.addIceCandidate(payload.candidate);
+      }
+    } else if (payload.type === 'call_reject' || payload.type === 'call_end') {
+      if (incomingCall && incomingCall.callId === payload.callId) {
+        set({ incomingCall: null });
+      }
+      if (activeCall && activeCall.callId === payload.callId) {
+        if (activeCall.webrtcManager) {
+          activeCall.webrtcManager.close();
+        }
+        set({ activeCall: null });
+      }
     }
   },
 }));

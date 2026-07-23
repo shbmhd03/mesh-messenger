@@ -6,6 +6,8 @@ import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { GroupInfoDrawer } from '../group/GroupInfoDrawer';
 import { MeshQLogo } from '../common/MeshQLogo';
+import { IncomingCallModal } from '../call/IncomingCallModal';
+import { ActiveCallModal } from '../call/ActiveCallModal';
 
 function ShieldIcon() {
   return (
@@ -63,42 +65,27 @@ export function ChatView() {
     safetyNumberContactId, showSafetyNumber, verifyContact,
     setActiveConversation, sendChatRequest, acceptChatRequest, declineChatRequest,
     groupInfoDrawerOpen, setGroupInfoDrawerOpen,
-    deleteMessageForMe, deleteMessageForEveryone
+    deleteMessageForMe, deleteMessageForEveryone,
+    startCall
   } = useMeshStore();
 
-  const [activeCallType, setActiveCallType] = useState<'voice' | 'video' | null>(null);
-  const [callSeconds, setCallSeconds] = useState(0);
   const [inChatSearch, setInChatSearch] = useState('');
   const [showInChatSearch, setShowInChatSearch] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const callTimerRef = useRef<any>(null);
 
   const conversation = conversations.find((c) => c.id === activeConversationId);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation?.messages.length]);
-
-  // Call timer effect
-  useEffect(() => {
-    if (activeCallType) {
-      setCallSeconds(0);
-      callTimerRef.current = setInterval(() => {
-        setCallSeconds((prev) => prev + 1);
-      }, 1000);
-    } else {
-      if (callTimerRef.current) clearInterval(callTimerRef.current);
-    }
-    return () => {
-      if (callTimerRef.current) clearInterval(callTimerRef.current);
-    };
-  }, [activeCallType]);
+  }, [conversation?.messages]);
 
   if (!conversation) {
     return (
       <div className="main-area whatsapp-theme">
+        <IncomingCallModal />
+        <ActiveCallModal />
         <div className="empty-state">
           <div className="empty-state-icon-wrapper">
             <img src="/meshq-main-logo.png" alt="MeshQ Main Logo" className="empty-state-main-logo" />
@@ -115,11 +102,11 @@ export function ChatView() {
     );
   }
 
-  const { contact, messages } = conversation;
-
-  const filteredMessages = inChatSearch
-    ? messages.filter((m) => m.text.toLowerCase().includes(inChatSearch.toLowerCase()))
-    : messages;
+  const contact = conversation.contact;
+  const filterSearch = inChatSearch.trim().toLowerCase();
+  const displayMessages = filterSearch
+    ? conversation.messages.filter((m) => m.text.toLowerCase().includes(filterSearch))
+    : conversation.messages;
 
   const formatCallTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -201,7 +188,7 @@ export function ChatView() {
           <button
             className="icon-btn"
             title="Start Encrypted Voice Call"
-            onClick={() => setActiveCallType('voice')}
+            onClick={() => startCall(contact.nodeId, 'voice')}
             id="start-voice-call-btn"
           >
             <PhoneIcon />
@@ -210,7 +197,7 @@ export function ChatView() {
           <button
             className="icon-btn"
             title="Start Encrypted Video Call"
-            onClick={() => setActiveCallType('video')}
+            onClick={() => startCall(contact.nodeId, 'video')}
             id="start-video-call-btn"
           >
             <VideoIcon />
@@ -263,36 +250,6 @@ export function ChatView() {
           {inChatSearch && (
             <button className="clear-search-btn" onClick={() => setInChatSearch('')}>✕</button>
           )}
-        </div>
-      )}
-
-      {/* Voice / Video Call Fullscreen Overlay Modal */}
-      {activeCallType && (
-        <div className="call-modal-overlay">
-          <div className="call-card">
-            <div className="call-avatar-pulse">
-              <Avatar initials={contact.initials} color={contact.color} size="lg" />
-              <div className="pulse-ring ring1"></div>
-              <div className="pulse-ring ring2"></div>
-            </div>
-
-            <h2 className="call-contact-name">{contact.name}</h2>
-            <p className="call-status">
-              {callSeconds < 3 ? 'Connecting E2EE Peer Audio...' : `Mesh Voice Call • ${formatCallTime(callSeconds)}`}
-            </p>
-
-            <div className="call-soundwaves">
-              <span></span><span></span><span></span><span></span><span></span>
-            </div>
-
-            <div className="call-actions">
-              <button className="call-end-btn" onClick={() => setActiveCallType(null)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -373,7 +330,7 @@ export function ChatView() {
               <span>🔒 Messages and calls are end-to-end encrypted</span>
             </div>
 
-            {filteredMessages.map((msg, i) => (
+            {displayMessages.map((msg, i) => (
               <MessageBubble
                 key={msg.id}
                 id={msg.id}
