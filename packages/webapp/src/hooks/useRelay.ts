@@ -89,6 +89,9 @@ export function useRelay() {
                 } else if (payload.type === 'group_msg' || payload.type === 'group_invite' || payload.type === 'group_update') {
                   // Handle incoming group chat packets
                   useMeshStore.getState().handleIncomingGroupPacket(fromNodeId, payload);
+                } else if (payload.type === 'delete_msg') {
+                  // Handle incoming message deletion packet
+                  useMeshStore.getState().handleIncomingDeletePacket(fromNodeId, payload.conversationId, payload.messageId);
                 }
                 return;
               }

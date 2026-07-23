@@ -61,7 +61,8 @@ export function ChatView() {
     conversations, activeConversationId, sendMessage,
     safetyNumberContactId, showSafetyNumber, verifyContact,
     setActiveConversation, sendChatRequest, acceptChatRequest, declineChatRequest,
-    groupInfoDrawerOpen, setGroupInfoDrawerOpen
+    groupInfoDrawerOpen, setGroupInfoDrawerOpen,
+    deleteMessageForMe, deleteMessageForEveryone
   } = useMeshStore();
 
   const [activeCallType, setActiveCallType] = useState<'voice' | 'video' | null>(null);
@@ -374,6 +375,7 @@ export function ChatView() {
             {filteredMessages.map((msg, i) => (
               <MessageBubble
                 key={msg.id}
+                id={msg.id}
                 text={msg.text}
                 sent={msg.sent}
                 timestamp={msg.timestamp}
@@ -381,6 +383,8 @@ export function ChatView() {
                 transport={msg.transport}
                 animDelay={i * 20}
                 senderName={msg.senderName}
+                onDeleteForMe={(msgId) => deleteMessageForMe(conversation.id, msgId)}
+                onDeleteForEveryone={(msgId) => deleteMessageForEveryone(conversation.id, msgId)}
               />
             ))}
             <div ref={messagesEndRef} />

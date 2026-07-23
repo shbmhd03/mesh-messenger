@@ -109,6 +109,11 @@ interface MeshState {
   showSafetyNumber: (contactId: string | null) => void;
   verifyContact: (contactId: string) => void;
 
+  // Message Deletion Actions
+  deleteMessageForMe: (conversationId: string, messageId: string) => void;
+  deleteMessageForEveryone: (conversationId: string, messageId: string) => void;
+  handleIncomingDeletePacket: (fromNodeId: string, conversationId: string, messageId: string) => void;
+
   // Group Chat Actions
   createGroup: (name: string, description: string, selectedContactIds: string[]) => string;
   addGroupMember: (groupId: string, contactIdOrNodeId: string) => void;
@@ -726,6 +731,82 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         : conv
     ),
   })),
+
+  // Message Deletion Actions Implementation
+  deleteMessageForMe: (conversationId, messageId) => {
+    set((state) => ({
+      conversations: state.conversations.map((conv) => {
+        if (conv.id !== conversationId) return conv;
+        const updatedMsgs = conv.messages.filter((m) => m.id !== messageId);
+        const lastMsg = updatedMsgs.length > 0 ? updatedMsgs[updatedMsgs.length - 1] : null;
+        return {
+          ...conv,
+          messages: updatedMsgs,
+          lastMessage: lastMsg ? lastMsg.text : 'Message deleted',
+          lastTime: lastMsg ? lastMsg.timestamp : conv.lastTime,
+        };
+      }),
+    }));
+  },
+
+  deleteMessageForEveryone: (conversationId, messageId) => {
+    const state = get();
+    const conv = state.conversations.find((c) => c.id === conversationId);
+    if (!conv) return;
+
+    set((prev) => ({
+      conversations: prev.conversations.map((c) => {
+        if (c.id !== conversationId) return c;
+        const updatedMsgs = c.messages.map((m) =>
+          m.id === messageId ? { ...m, text: '🚫 This message was deleted', status: 'failed' as const } : m
+        );
+        return {
+          ...c,
+          messages: updatedMsgs,
+          lastMessage: '🚫 This message was deleted',
+        };
+      }),
+    }));
+
+    if (state.sendPacketHandler) {
+      const payload = JSON.stringify({
+        type: 'delete_msg',
+        conversationId,
+        messageId,
+      });
+
+      if (conv.isGroup && conv.members) {
+        conv.members.forEach((m) => {
+          if (m.nodeId !== state.ownNodeId) {
+            try {
+              state.sendPacketHandler!(m.nodeId, payload);
+            } catch (e) {}
+          }
+        });
+      } else {
+        try {
+          state.sendPacketHandler(conversationId, payload);
+        } catch (e) {}
+      }
+    }
+  },
+
+  handleIncomingDeletePacket: (fromNodeId, conversationId, messageId) => {
+    const targetConvId = conversationId || fromNodeId;
+    set((state) => ({
+      conversations: state.conversations.map((conv) => {
+        if (conv.id !== targetConvId && conv.id !== fromNodeId) return conv;
+        const updatedMsgs = conv.messages.map((m) =>
+          m.id === messageId ? { ...m, text: '🚫 This message was deleted', status: 'failed' as const } : m
+        );
+        return {
+          ...conv,
+          messages: updatedMsgs,
+          lastMessage: '🚫 This message was deleted',
+        };
+      }),
+    }));
+  },
 
   // Group Chat Actions Implementation
   createGroup: (name, description, selectedContactIds) => {
