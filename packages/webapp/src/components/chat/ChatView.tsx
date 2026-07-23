@@ -100,7 +100,7 @@ export function ChatView() {
       <div className="main-area whatsapp-theme">
         <div className="empty-state">
           <div className="empty-state-icon-wrapper">
-            <img src="/meshq-icon.png" alt="MeshQ" className="empty-state-logo-icon" />
+            <img src="/meshq-main-logo.png" alt="MeshQ Main Logo" className="empty-state-main-logo" />
           </div>
           <img src="/meshq-text-logo.png" alt="MeshQ" className="empty-state-text-logo" />
           <p className="empty-state-desc">

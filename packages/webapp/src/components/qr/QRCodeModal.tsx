@@ -174,7 +174,10 @@ export function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content qr-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>QR Code & Scanner</h3>
+          <div className="modal-title-with-icon">
+            <img src="/meshq-icon.png" alt="MeshQ" className="modal-header-icon" />
+            <h3>QR Code & Scanner</h3>
+          </div>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
 

@@ -2749,6 +2749,26 @@ body {
   animation: pulse-logo 3s ease-in-out infinite alternate;
 }
 
+.empty-state-main-logo {
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 30px rgba(107, 78, 254, 0.35));
+  animation: pulse-logo 3s ease-in-out infinite alternate;
+}
+
+.modal-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-header-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
 .empty-state-text-logo {
   height: 38px;
   width: auto;
