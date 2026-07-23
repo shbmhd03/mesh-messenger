@@ -7,6 +7,30 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useMeshStore } from '../store/meshStore';
 import { RelayTransport, type ConnectionState, type RelayMessage } from '../lib/transport';
 
+// Helper: Safe UTF-8 to Base64 (supports all emojis and multi-byte characters)
+function utf8ToBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// Helper: Safe Base64 to UTF-8 (supports all emojis and multi-byte characters)
+function base64ToUtf8(base64: string): string {
+  try {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  } catch (e) {
+    return atob(base64);
+  }
+}
+
 export function useRelay() {
   const { ownNodeId, relayConnected, addLiveMessage, updateLivePeers, ownDisplayName, stealthMode } = useMeshStore();
   const transportRef = useRef<RelayTransport | null>(null);
@@ -42,8 +66,8 @@ export function useRelay() {
           const base64Data = msg.data as string;
           
           try {
-            // Decrypt base64 packet payload
-            const text = atob(base64Data);
+            // Decrypt base64 packet payload with UTF-8 support
+            const text = base64ToUtf8(base64Data);
             try {
               const payload = JSON.parse(text);
               if (payload && typeof payload === 'object') {
@@ -115,8 +139,8 @@ export function useRelay() {
   const sendPacket = useCallback((destNodeId: string, text: string) => {
     if (transportRef.current) {
       try {
-        // Encode packet payload to base64
-        const base64Data = btoa(text);
+        // Encode packet payload to base64 with UTF-8 support for emojis
+        const base64Data = utf8ToBase64(text);
         transportRef.current.sendPacket(destNodeId, base64Data);
       } catch (e) {
         console.error('[relay] failed to encode packet:', e);
