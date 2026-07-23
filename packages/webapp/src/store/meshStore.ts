@@ -265,6 +265,9 @@ if (typeof document !== 'undefined') {
   document.documentElement.setAttribute('data-theme', initialTheme);
 }
 
+// Module-level buffer for WebRTC ICE candidates arriving before acceptCall
+const iceCandidateBuffer = new Map<string, RTCIceCandidateInit[]>();
+
 export const useMeshStore = create<MeshState>((set, get) => ({
   ownNodeId: initialNodeId,
   ownDisplayName: initialDisplayName,
@@ -521,7 +524,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       text: text.trim(),
       sent: true,
       timestamp: Date.now(),
-      status: 'sent',
+      status: 'pending',
       transport: 'relay',
     };
 
@@ -715,9 +718,10 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     set((state) => {
       const peerNameMap = new Map(peerList.map((p) => [p.id, p.name]));
 
+      // Refresh online and name status for existing contacts (do not auto-create unrequested contacts)
       const updatedContacts = state.contacts.map((c) => {
-        const isOnline = peerNodeIds.includes(c.id);
-        const name = peerNameMap.get(c.id) || c.name;
+        const isOnline = peerNodeIds.includes(c.id) || peerNodeIds.includes(c.nodeId);
+        const name = peerNameMap.get(c.id) || peerNameMap.get(c.nodeId) || c.name;
         const initials = name.substring(0, 2).toUpperCase();
         return {
           ...c,
@@ -727,29 +731,10 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         };
       });
 
-      // Ensure any newly discovered peer has a contact record
-      const finalContacts = [...updatedContacts];
-      for (const peer of peerList) {
-        if (!finalContacts.some((c) => c.id === peer.id)) {
-          const initials = peer.name.substring(0, 2).toUpperCase();
-          finalContacts.push({
-            id: peer.id,
-            nodeId: peer.id,
-            name: peer.name,
-            initials,
-            color: getDeterministicColor(peer.id),
-            online: true,
-            hopCount: 1,
-            transport: 'relay',
-            verified: false,
-          });
-        }
-      }
-
-      // Sync active conversation contacts online flag & updated names
+      // Refresh online and name status for existing conversations (do not auto-create unrequested conversations)
       const updatedConversations = state.conversations.map((conv) => {
-        const isOnline = peerNodeIds.includes(conv.id);
-        const name = peerNameMap.get(conv.id) || conv.contact.name;
+        const isOnline = peerNodeIds.includes(conv.id) || peerNodeIds.includes(conv.contact.nodeId);
+        const name = peerNameMap.get(conv.id) || peerNameMap.get(conv.contact.nodeId) || conv.contact.name;
         const initials = name.substring(0, 2).toUpperCase();
         return {
           ...conv,
@@ -757,30 +742,15 @@ export const useMeshStore = create<MeshState>((set, get) => ({
             ...conv.contact,
             name,
             initials,
-            online: isOnline
+            online: isOnline,
           },
         };
       });
 
-      // Automatically add new conversations for newly discovered peers
-      const finalConversations = [...updatedConversations];
-      for (const contact of finalContacts) {
-        if (!finalConversations.some((c) => c.id === contact.id)) {
-          finalConversations.push({
-            id: contact.id,
-            contact,
-            messages: [],
-            lastMessage: 'Discovered peer online',
-            lastTime: Date.now(),
-            unread: 0,
-          });
-        }
-      }
-
       return {
         meshNodes: newMeshNodes,
-        contacts: finalContacts,
-        conversations: finalConversations,
+        contacts: updatedContacts,
+        conversations: updatedConversations,
       };
     });
   },
@@ -1346,6 +1316,13 @@ export const useMeshStore = create<MeshState>((set, get) => ({
 
       const answerSdp = await manager.createAnswer(offerSdp, callType);
 
+      // Flush early ICE candidates buffered while incomingCall was ringing
+      const buffered = iceCandidateBuffer.get(callId) || [];
+      for (const candidate of buffered) {
+        await manager.addIceCandidate(candidate);
+      }
+      iceCandidateBuffer.delete(callId);
+
       set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, status: 'connected' } } : {});
 
       if (sendPacketHandler) {
@@ -1354,6 +1331,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     } catch (err: any) {
       console.error('[WebRTC] acceptCall error:', err);
       manager.close();
+      iceCandidateBuffer.delete(callId);
       set({ activeCall: null });
       alert('Could not accept call. Check camera/mic permissions.');
     }
@@ -1362,6 +1340,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   rejectCall: () => {
     const { incomingCall, sendPacketHandler } = get();
     if (incomingCall) {
+      iceCandidateBuffer.delete(incomingCall.callId);
       if (sendPacketHandler) {
         sendPacketHandler(incomingCall.callerNodeId, JSON.stringify({ type: 'call_reject', callId: incomingCall.callId }));
       }
@@ -1372,6 +1351,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   endCall: () => {
     const { activeCall, sendPacketHandler } = get();
     if (activeCall) {
+      iceCandidateBuffer.delete(activeCall.callId);
       if (activeCall.webrtcManager) {
         activeCall.webrtcManager.close();
       }
@@ -1426,8 +1406,13 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     } else if (payload.type === 'call_ice') {
       if (activeCall && activeCall.callId === payload.callId && activeCall.webrtcManager) {
         activeCall.webrtcManager.addIceCandidate(payload.candidate);
+      } else {
+        // Buffer candidate while incomingCall is ringing or activeCall is initializing
+        const existing = iceCandidateBuffer.get(payload.callId) || [];
+        iceCandidateBuffer.set(payload.callId, [...existing, payload.candidate]);
       }
     } else if (payload.type === 'call_reject' || payload.type === 'call_end') {
+      iceCandidateBuffer.delete(payload.callId);
       if (incomingCall && incomingCall.callId === payload.callId) {
         set({ incomingCall: null });
       }

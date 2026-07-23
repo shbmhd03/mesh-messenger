@@ -25,6 +25,7 @@ export class WebRTCManager {
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
   private events: WebRTCEvents;
+  private queuedIceCandidates: RTCIceCandidateInit[] = [];
 
   constructor(events: WebRTCEvents) {
     this.events = events;
@@ -123,6 +124,7 @@ export class WebRTCManager {
   public async createAnswer(offerSdp: RTCSessionDescriptionInit, callType: CallType): Promise<RTCSessionDescriptionInit> {
     const pc = this.initPeerConnection();
     await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
+    await this.flushQueuedIceCandidates();
 
     const stream = await this.getLocalStream(callType);
     stream.getTracks().forEach((track) => {
@@ -140,17 +142,37 @@ export class WebRTCManager {
   public async handleAnswer(answerSdp: RTCSessionDescriptionInit): Promise<void> {
     if (!this.pc) return;
     await this.pc.setRemoteDescription(new RTCSessionDescription(answerSdp));
+    await this.flushQueuedIceCandidates();
   }
 
   /**
-   * Add ICE candidate received via signaling
+   * Add ICE candidate received via signaling (queues candidate if remoteDescription is not ready)
    */
   public async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
-    if (!this.pc) return;
+    if (!this.pc || !this.pc.remoteDescription) {
+      this.queuedIceCandidates.push(candidate);
+      return;
+    }
     try {
       await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (e) {
       console.warn('[WebRTC] Error adding ICE candidate:', e);
+    }
+  }
+
+  /**
+   * Flush all ICE candidates that arrived before remoteDescription was set
+   */
+  private async flushQueuedIceCandidates(): Promise<void> {
+    if (!this.pc || !this.pc.remoteDescription) return;
+    const candidatesToFlush = [...this.queuedIceCandidates];
+    this.queuedIceCandidates = [];
+    for (const candidate of candidatesToFlush) {
+      try {
+        await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.warn('[WebRTC] Error adding queued ICE candidate:', e);
+      }
     }
   }
 

@@ -14,6 +14,7 @@ export function ActiveCallModal() {
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     let timer: any = null;
@@ -36,6 +37,9 @@ export function ActiveCallModal() {
   useEffect(() => {
     if (remoteVideoRef.current && activeCall?.remoteStream) {
       remoteVideoRef.current.srcObject = activeCall.remoteStream;
+    }
+    if (remoteAudioRef.current && activeCall?.remoteStream) {
+      remoteAudioRef.current.srcObject = activeCall.remoteStream;
     }
   }, [activeCall?.remoteStream]);
 
@@ -71,6 +75,9 @@ export function ActiveCallModal() {
         ) : (
           /* Voice Only Container */
           <div className="voice-call-content">
+            {activeCall.remoteStream && (
+              <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+            )}
             <div className="call-avatar-pulse">
               <Avatar initials={activeCall.peerName.substring(0, 2).toUpperCase()} color="var(--accent)" size="lg" />
               {activeCall.status === 'connected' && (

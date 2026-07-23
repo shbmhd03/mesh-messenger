@@ -6,8 +6,6 @@ import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { GroupInfoDrawer } from '../group/GroupInfoDrawer';
 import { MeshQLogo } from '../common/MeshQLogo';
-import { IncomingCallModal } from '../call/IncomingCallModal';
-import { ActiveCallModal } from '../call/ActiveCallModal';
 
 function ShieldIcon() {
   return (
@@ -84,8 +82,6 @@ export function ChatView() {
   if (!conversation) {
     return (
       <div className="main-area whatsapp-theme">
-        <IncomingCallModal />
-        <ActiveCallModal />
         <div className="empty-state">
           <div className="empty-state-icon-wrapper">
             <img src="/meshq-main-logo.png" alt="MeshQ Main Logo" className="empty-state-main-logo" />

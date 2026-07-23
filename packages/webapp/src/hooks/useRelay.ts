@@ -111,15 +111,19 @@ export function useRelay() {
         } else if (msg.type === 'stored') {
           // Server confirmed store-and-forward queueing in Convex (single checkmark!)
           const destNodeId = msg.destNodeId as string;
+          const msgId = (msg.messageId || msg.id) as string | undefined;
           const conversations = useMeshStore.getState().conversations;
           const conv = conversations.find(c => c.id === destNodeId);
-          const pendingMsg = conv?.messages.filter(m => m.status === 'pending')[0];
-          
-          if (pendingMsg) {
+
+          const targetMsg = msgId
+            ? conv?.messages.find(m => m.id === msgId)
+            : conv?.messages.find(m => m.sent && (m.status === 'pending' || m.status === 'sent'));
+
+          if (targetMsg) {
             useMeshStore.setState({
               conversations: conversations.map(c => c.id === destNodeId ? {
                 ...c,
-                messages: c.messages.map(m => m.id === pendingMsg.id ? { ...m, status: 'sent' } : m)
+                messages: c.messages.map(m => m.id === targetMsg.id ? { ...m, status: 'sent' } : m)
               } : c)
             });
           }
