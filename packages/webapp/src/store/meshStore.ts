@@ -76,12 +76,15 @@ interface MeshState {
   relayConnected: boolean;
   meshPanelOpen: boolean;
   safetyNumberContactId: string | null;
+  theme: 'dark' | 'light';
 
   // Modals & Drawers
   qrModalOpen: boolean;
   createGroupModalOpen: boolean;
   groupInfoDrawerOpen: boolean;
 
+  setTheme: (theme: 'dark' | 'light') => void;
+  toggleTheme: () => void;
   setQrModalOpen: (open: boolean) => void;
   setCreateGroupModalOpen: (open: boolean) => void;
   setGroupInfoDrawerOpen: (open: boolean) => void;
@@ -207,16 +210,33 @@ const getInitialConversations = (): Conversation[] => {
   return [];
 };
 
+const STORAGE_KEY_THEME = 'mesh_theme';
+
+const getInitialTheme = (): 'dark' | 'light' => {
+  if (typeof window === 'undefined' || !window.localStorage) return 'dark';
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_THEME);
+    if (saved === 'light' || saved === 'dark') return saved;
+  } catch {}
+  return 'dark';
+};
+
 const initialNodeId = getInitialNodeId();
 const initialDisplayName = getInitialDisplayName(initialNodeId);
 const initialStealthMode = getInitialStealthMode();
 const initialContacts = getInitialContacts();
 const initialConversations = getInitialConversations();
+const initialTheme = getInitialTheme();
+
+if (typeof document !== 'undefined') {
+  document.documentElement.setAttribute('data-theme', initialTheme);
+}
 
 export const useMeshStore = create<MeshState>((set, get) => ({
   ownNodeId: initialNodeId,
   ownDisplayName: initialDisplayName,
   stealthMode: initialStealthMode,
+  theme: initialTheme,
 
   contacts: initialContacts,
   conversations: initialConversations,
@@ -231,6 +251,21 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   qrModalOpen: false,
   createGroupModalOpen: false,
   groupInfoDrawerOpen: false,
+
+  setTheme: (theme) => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    set({ theme });
+  },
+
+  toggleTheme: () => {
+    const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', nextTheme);
+    }
+    set({ theme: nextTheme });
+  },
 
   setQrModalOpen: (open) => set({ qrModalOpen: open }),
   setCreateGroupModalOpen: (open) => set({ createGroupModalOpen: open }),
@@ -1162,6 +1197,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem(STORAGE_KEY_NODE_ID, state.ownNodeId);
       localStorage.setItem(STORAGE_KEY_DISPLAY_NAME, state.ownDisplayName);
       localStorage.setItem(STORAGE_KEY_STEALTH_MODE, String(state.stealthMode));
+      localStorage.setItem(STORAGE_KEY_THEME, state.theme);
       localStorage.setItem(STORAGE_KEY_CONTACTS, JSON.stringify(state.contacts));
       localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(state.conversations));
     } catch {

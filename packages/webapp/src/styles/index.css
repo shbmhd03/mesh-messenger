@@ -36,56 +36,135 @@ body {
 
 /* ── Color Tokens ─────────────────────────────────────────────────────── */
 
-:root {
-  /* Base palette: deep space dark */
-  --bg-base: #06060b;
-  --bg-surface: #0c0c14;
-  --bg-elevated: #111119;
-  --bg-overlay: #16161f;
-  --bg-hover: #1c1c28;
-  --bg-active: #222233;
+/* ── MeshQ Core Brand Palette & Theme Tokens ──────────────────────────── */
 
-  /* Glass surfaces */
-  --glass-bg: rgba(18, 18, 30, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-hover: rgba(255, 255, 255, 0.03);
+:root,
+[data-theme="dark"] {
+  /* Brand Palette */
+  --brand-navy: #011442;
+  --brand-cyan: #00A7FF;
+  --brand-primary: #006DF5;
+  --brand-royal: #1747E8;
+  --brand-purple: #3B1FB8;
+  --brand-green: #35E55A;
+  --brand-gradient: linear-gradient(135deg, #00A7FF 0%, #006DF5 50%, #3B1FB8 100%);
+
+  /* Dark Mode Variables */
+  --background: #050B16;
+  --surface: #0B1628;
+  --surface-secondary: #111F36;
+  --text-primary: #F7FAFF;
+  --text-secondary: #A9B7CC;
+  --border: #24334A;
+
+  --primary: #006DF5;
+  --primary-hover: #0057D9;
+  --secondary: #8B72FF;
+  --link: #69B4FF;
+  --focus: #38BDF8;
+  --mesh-green: #35E55A;
+
+  --danger: #FF6B6B;
+  --warning: #FBBF24;
+
+  /* App Mappings */
+  --bg-base: var(--background);
+  --bg-surface: var(--surface);
+  --bg-elevated: var(--surface-secondary);
+  --bg-overlay: #14233c;
+  --bg-hover: #182a46;
+  --bg-active: #203557;
+
+  --glass-bg: rgba(11, 22, 40, 0.85);
+  --glass-border: var(--border);
+  --glass-hover: rgba(255, 255, 255, 0.04);
   --glass-blur: 24px;
 
-  /* Accent: electric indigo / violet */
-  --accent-hue: 252;
-  --accent: hsl(var(--accent-hue), 85%, 63%);
-  --accent-hover: hsl(var(--accent-hue), 85%, 70%);
-  --accent-soft: hsla(var(--accent-hue), 85%, 63%, 0.12);
-  --accent-glow: hsla(var(--accent-hue), 85%, 63%, 0.25);
-  --accent-gradient: linear-gradient(135deg, hsl(252, 85%, 63%), hsl(280, 80%, 60%), hsl(320, 75%, 55%));
+  --accent: var(--primary);
+  --accent-hover: var(--primary-hover);
+  --accent-soft: rgba(0, 109, 245, 0.15);
+  --accent-glow: rgba(0, 167, 255, 0.3);
+  --accent-gradient: var(--brand-gradient);
 
-  /* Mesh network accent: cyan/teal for mesh visuals */
-  --mesh-hue: 175;
-  --mesh: hsl(var(--mesh-hue), 75%, 50%);
-  --mesh-soft: hsla(var(--mesh-hue), 75%, 50%, 0.12);
-  --mesh-glow: hsla(var(--mesh-hue), 75%, 50%, 0.3);
+  --mesh: var(--brand-cyan);
+  --mesh-soft: rgba(0, 167, 255, 0.15);
+  --mesh-glow: rgba(0, 167, 255, 0.35);
 
-  /* Semantic colors */
-  --success: hsl(152, 65%, 48%);
-  --success-soft: hsla(152, 65%, 48%, 0.12);
-  --warning: hsl(38, 92%, 55%);
-  --warning-soft: hsla(38, 92%, 55%, 0.12);
-  --error: hsl(0, 72%, 58%);
-  --error-soft: hsla(0, 72%, 58%, 0.12);
+  --success: var(--mesh-green);
+  --success-soft: rgba(53, 229, 90, 0.15);
+  --error: var(--danger);
+  --error-soft: rgba(255, 107, 107, 0.15);
+  --warning-soft: rgba(251, 191, 36, 0.15);
 
-  /* Text */
-  --text-primary: rgba(255, 255, 255, 0.92);
-  --text-secondary: rgba(255, 255, 255, 0.55);
-  --text-tertiary: rgba(255, 255, 255, 0.32);
-  --text-inverse: #06060b;
-  --text-accent: var(--accent);
+  --border-subtle: rgba(36, 51, 74, 0.6);
+  --border-default: var(--border);
+  --border-strong: #324766;
+  --border-accent: rgba(0, 167, 255, 0.4);
 
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --border-accent: hsla(var(--accent-hue), 85%, 63%, 0.3);
+  --text-tertiary: #6b7c96;
+  --text-inverse: #050B16;
+  --text-accent: var(--link);
+}
 
+[data-theme="light"] {
+  /* Light Mode Variables */
+  --background: #F7F9FC;
+  --surface: #FFFFFF;
+  --surface-secondary: #EEF4FF;
+  --text-primary: #071B4A;
+  --text-secondary: #5B6B84;
+  --border: #D8E2F0;
+
+  --primary: #006DF5;
+  --primary-hover: #0057D9;
+  --secondary: #5B3DF5;
+  --link: #075FD8;
+  --focus: #38BDF8;
+  --mesh-green: #01CC04;
+
+  --danger: #DC2626;
+  --warning: #D97706;
+
+  /* App Mappings */
+  --bg-base: var(--background);
+  --bg-surface: var(--surface);
+  --bg-elevated: var(--surface-secondary);
+  --bg-overlay: #E4EEFF;
+  --bg-hover: #EEF4FF;
+  --bg-active: #DCE8FF;
+
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: var(--border);
+  --glass-hover: rgba(0, 109, 245, 0.04);
+  --glass-blur: 20px;
+
+  --accent: var(--primary);
+  --accent-hover: var(--primary-hover);
+  --accent-soft: rgba(0, 109, 245, 0.1);
+  --accent-glow: rgba(0, 167, 255, 0.2);
+  --accent-gradient: var(--brand-gradient);
+
+  --mesh: #0077FF;
+  --mesh-soft: rgba(0, 119, 255, 0.1);
+  --mesh-glow: rgba(0, 119, 255, 0.25);
+
+  --success: var(--mesh-green);
+  --success-soft: rgba(1, 204, 4, 0.12);
+  --error: var(--danger);
+  --error-soft: rgba(220, 38, 38, 0.12);
+  --warning-soft: rgba(217, 119, 6, 0.12);
+
+  --border-subtle: rgba(216, 226, 240, 0.8);
+  --border-default: var(--border);
+  --border-strong: #C4D3E8;
+  --border-accent: rgba(0, 109, 245, 0.3);
+
+  --text-tertiary: #8797AE;
+  --text-inverse: #FFFFFF;
+  --text-accent: var(--link);
+}
+
+:root {
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
