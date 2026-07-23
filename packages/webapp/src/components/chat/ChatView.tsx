@@ -99,10 +99,10 @@ export function ChatView() {
     return (
       <div className="main-area whatsapp-theme">
         <div className="empty-state">
-          <div className="empty-state-icon">
-            <MeshIcon />
+          <div className="empty-state-icon-wrapper">
+            <img src="/meshq-icon.png" alt="MeshQ" className="empty-state-logo-icon" />
           </div>
-          <h2 className="empty-state-title">MeshQ Web</h2>
+          <img src="/meshq-text-logo.png" alt="MeshQ" className="empty-state-text-logo" />
           <p className="empty-state-desc">
             Send and receive end-to-end encrypted peer-to-peer messages across the mesh network without internet tracking.
           </p>

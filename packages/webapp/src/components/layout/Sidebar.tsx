@@ -85,7 +85,7 @@ export function Sidebar() {
       <div className="sidebar-header">
         <div className="header-left-profile" onClick={() => setShowProfileDrawer(!showProfileDrawer)} title="Open Profile Settings">
           <Avatar initials={ownDisplayName.substring(0, 2).toUpperCase()} color="var(--accent)" size="sm" />
-          <span className="header-app-name">MeshQ</span>
+          <img src="/meshq-text-logo.png" alt="MeshQ" className="header-logo-img" />
         </div>
 
         <div className="sidebar-header-actions">
