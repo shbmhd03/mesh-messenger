@@ -79,16 +79,21 @@ export class WebRTCManager {
     };
 
     pc.ontrack = (event) => {
+      let targetStream: MediaStream;
       if (event.streams && event.streams[0]) {
-        this.remoteStream = event.streams[0];
-        this.events.onRemoteStream(event.streams[0]);
+        targetStream = event.streams[0];
+        this.remoteStream = targetStream;
       } else {
         if (!this.remoteStream) {
           this.remoteStream = new MediaStream();
         }
-        this.remoteStream.addTrack(event.track);
-        this.events.onRemoteStream(this.remoteStream);
+        if (!this.remoteStream.getTracks().some((t) => t.id === event.track.id)) {
+          this.remoteStream.addTrack(event.track);
+        }
+        targetStream = this.remoteStream;
       }
+      // Emit a fresh MediaStream instance clone so React detects stream changes & re-renders video/audio elements
+      this.events.onRemoteStream(new MediaStream(targetStream.getTracks()));
     };
 
     pc.onconnectionstatechange = () => {
@@ -123,15 +128,20 @@ export class WebRTCManager {
    */
   public async createAnswer(offerSdp: RTCSessionDescriptionInit, callType: CallType): Promise<RTCSessionDescriptionInit> {
     const pc = this.initPeerConnection();
-    await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
-    await this.flushQueuedIceCandidates();
-
     const stream = await this.getLocalStream(callType);
+
+    // Add local tracks BEFORE setRemoteDescription so tracks are negotiated in the SDP answer
     stream.getTracks().forEach((track) => {
       pc.addTrack(track, stream);
     });
 
-    const answer = await pc.createAnswer();
+    await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
+    await this.flushQueuedIceCandidates();
+
+    const answer = await pc.createAnswer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: callType === 'video',
+    });
     await pc.setLocalDescription(answer);
     return answer;
   }
