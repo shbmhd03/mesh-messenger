@@ -1213,7 +1213,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, remoteStream: stream, status: 'connected' } } : {});
       },
       onConnectionStateChange: (state) => {
-        if (state === 'connected') {
+        if (state === 'connected' || (state as string) === 'completed') {
           set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, status: 'connected' } } : {});
         } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
           get().endCall();
@@ -1283,7 +1283,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, remoteStream: stream, status: 'connected' } } : {});
       },
       onConnectionStateChange: (state) => {
-        if (state === 'connected') {
+        if (state === 'connected' || (state as string) === 'completed') {
           set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, status: 'connected' } } : {});
         } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
           get().endCall();
@@ -1399,26 +1399,36 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         },
       });
     } else if (payload.type === 'call_answer') {
-      if (activeCall && activeCall.callId === payload.callId && activeCall.webrtcManager) {
-        activeCall.webrtcManager.handleAnswer(payload.sdp);
-        set({ activeCall: { ...activeCall, status: 'connected' } });
+      const currentCall = get().activeCall;
+      if (currentCall && currentCall.webrtcManager) {
+        if (!payload.callId || !currentCall.callId || String(currentCall.callId) === String(payload.callId)) {
+          currentCall.webrtcManager.handleAnswer(payload.sdp);
+          set((prev) => (prev.activeCall ? { activeCall: { ...prev.activeCall, status: 'connected' } } : {}));
+        }
       }
     } else if (payload.type === 'call_ice') {
-      if (activeCall && activeCall.callId === payload.callId && activeCall.webrtcManager) {
-        activeCall.webrtcManager.addIceCandidate(payload.candidate);
-      } else {
-        // Buffer candidate while incomingCall is ringing or activeCall is initializing
-        const existing = iceCandidateBuffer.get(payload.callId) || [];
-        iceCandidateBuffer.set(payload.callId, [...existing, payload.candidate]);
+      const currentCall = get().activeCall;
+      if (currentCall && currentCall.webrtcManager) {
+        if (!payload.callId || !currentCall.callId || String(currentCall.callId) === String(payload.callId)) {
+          currentCall.webrtcManager.addIceCandidate(payload.candidate);
+        }
+      } else if (payload.callId) {
+        const key = String(payload.callId);
+        const existing = iceCandidateBuffer.get(key) || [];
+        iceCandidateBuffer.set(key, [...existing, payload.candidate]);
       }
     } else if (payload.type === 'call_reject' || payload.type === 'call_end') {
-      iceCandidateBuffer.delete(payload.callId);
-      if (incomingCall && incomingCall.callId === payload.callId) {
+      if (payload.callId) {
+        iceCandidateBuffer.delete(String(payload.callId));
+      }
+      const currentIncoming = get().incomingCall;
+      const currentCall = get().activeCall;
+      if (currentIncoming && (!payload.callId || String(currentIncoming.callId) === String(payload.callId))) {
         set({ incomingCall: null });
       }
-      if (activeCall && activeCall.callId === payload.callId) {
-        if (activeCall.webrtcManager) {
-          activeCall.webrtcManager.close();
+      if (currentCall && (!payload.callId || String(currentCall.callId) === String(payload.callId))) {
+        if (currentCall.webrtcManager) {
+          currentCall.webrtcManager.close();
         }
         set({ activeCall: null });
       }
