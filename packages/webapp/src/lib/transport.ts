@@ -26,6 +26,7 @@ const JITTER_FACTOR = 0.3;
 export class RelayTransport {
   private ws: WebSocket | null = null;
   private nodeId: string;
+  private displayName?: string;
   private relayUrl: string;
   private events: TransportEvents;
   private state: ConnectionState = 'disconnected';
@@ -34,14 +35,16 @@ export class RelayTransport {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private intentionalClose = false;
 
-  constructor(nodeId: string, relayUrl: string, events: TransportEvents) {
+  constructor(nodeId: string, relayUrl: string, events: TransportEvents, displayName?: string) {
     this.nodeId = nodeId;
     this.relayUrl = relayUrl;
     this.events = events;
+    this.displayName = displayName;
   }
 
   /** Connect to the relay server */
-  connect(): void {
+  connect(displayName?: string): void {
+    if (displayName) this.displayName = displayName;
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
@@ -60,6 +63,7 @@ export class RelayTransport {
         this.send({
           type: 'register',
           nodeId: this.nodeId,
+          displayName: this.displayName,
         });
 
         // Start keepalive ping

@@ -542,10 +542,26 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     }));
   },
 
-  updateLivePeers: (peerList) => {
+  updateLivePeers: (rawPeerList) => {
+    // Normalize peer list items (support both string IDs and { id, name } objects)
+    const peerList: { id: string; name: string }[] = (rawPeerList || [])
+      .map((item: any) => {
+        if (typeof item === 'string') {
+          return { id: item, name: `Node ${item.substring(0, 8)}` };
+        }
+        if (item && typeof item === 'object' && item.id) {
+          return {
+            id: String(item.id),
+            name: item.name ? String(item.name) : `Node ${String(item.id).substring(0, 8)}`,
+          };
+        }
+        return null;
+      })
+      .filter((p): p is { id: string; name: string } => p !== null);
+
     const count = peerList.length;
     const newMeshNodes: MeshNode[] = peerList.map((peer, index) => {
-      const angle = (index * 2 * Math.PI) / count;
+      const angle = (index * 2 * Math.PI) / (count || 1);
       const radius = 30;
       const x = 50 + radius * Math.cos(angle);
       const y = 50 + radius * Math.sin(angle);
@@ -566,7 +582,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     const peerNodeIds = peerList.map((p) => p.id);
 
     set((state) => {
-      const peerNameMap = new Map(peerList.map(p => [p.id, p.name]));
+      const peerNameMap = new Map(peerList.map((p) => [p.id, p.name]));
 
       const updatedContacts = state.contacts.map((c) => {
         const isOnline = peerNodeIds.includes(c.id);

@@ -52,14 +52,17 @@ export function useRelay() {
   }, [stealthMode, relayConnected]);
 
   useEffect(() => {
-    const transport = new RelayTransport(ownNodeId, relayUrl, {
-      onStateChange: (state: ConnectionState) => {
-        useMeshStore.setState({ relayConnected: state === 'connected' });
-        if (state === 'connected') {
-          transport.rename(useMeshStore.getState().ownDisplayName);
-          transport.setStealth(useMeshStore.getState().stealthMode);
-        }
-      },
+    const transport = new RelayTransport(
+      ownNodeId,
+      relayUrl,
+      {
+        onStateChange: (state: ConnectionState) => {
+          useMeshStore.setState({ relayConnected: state === 'connected' });
+          if (state === 'connected') {
+            transport.rename(useMeshStore.getState().ownDisplayName);
+            transport.setStealth(useMeshStore.getState().stealthMode);
+          }
+        },
       onMessage: (msg: RelayMessage) => {
         if (msg.type === 'packet') {
           const fromNodeId = msg.fromNodeId as string;

@@ -717,10 +717,18 @@ async function start() {
 
         // ── Peer list request ────────────────────────────────────────────
         if (msg.type === 'peers') {
+          const list = [...peers.keys()]
+            .filter((id) => id !== nodeId && !peerStealth.has(id))
+            .map((id) => ({
+              id,
+              name: peerNames.get(id) || `Node ${id.substring(0, 8)}`,
+              stealth: false,
+            }));
+
           socket.send(JSON.stringify({
             type: 'peers',
-            peers: [...peers.keys()].filter(id => id !== nodeId),
-            count: peers.size - 1,
+            peers: list,
+            count: list.length,
           }));
           return;
         }
