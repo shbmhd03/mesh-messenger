@@ -3,6 +3,8 @@ import { Sidebar } from './components/layout/Sidebar';
 import { ChatView } from './components/chat/ChatView';
 import { useRelay } from './hooks/useRelay';
 import { useMeshStore } from './store/meshStore';
+import { IncomingCallModal } from './components/call/IncomingCallModal';
+import { ActiveCallModal } from './components/call/ActiveCallModal';
 
 export default function App() {
   const { sendPacket } = useRelay();
@@ -95,6 +97,8 @@ export default function App() {
 
   return (
     <div className={`app-shell ${hasActiveConversation ? 'has-active-chat' : ''}`}>
+      <IncomingCallModal />
+      <ActiveCallModal />
       <Sidebar />
       <ChatView />
     </div>

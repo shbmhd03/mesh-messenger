@@ -1254,24 +1254,27 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       },
     });
 
+    // 1. Open Call Window IMMEDIATELY so user sees calling UI instantly
+    set({
+      activeCall: {
+        callId,
+        peerNodeId,
+        peerName,
+        callType,
+        status: 'ringing',
+        isMuted: false,
+        isCameraOff: false,
+        localStream: null,
+        remoteStream: null,
+        webrtcManager: manager,
+      },
+    });
+
     try {
       const localStream = await manager.getLocalStream(callType);
-      const offerSdp = await manager.createOffer(callType);
+      set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, localStream } } : {});
 
-      set({
-        activeCall: {
-          callId,
-          peerNodeId,
-          peerName,
-          callType,
-          status: 'ringing',
-          isMuted: false,
-          isCameraOff: false,
-          localStream,
-          remoteStream: null,
-          webrtcManager: manager,
-        },
-      });
+      const offerSdp = await manager.createOffer(callType);
 
       if (sendPacketHandler) {
         sendPacketHandler(
@@ -1286,7 +1289,9 @@ export const useMeshStore = create<MeshState>((set, get) => ({
         );
       }
     } catch (err: any) {
+      console.error('[WebRTC] startCall error:', err);
       manager.close();
+      set({ activeCall: null });
       alert(err.message || 'Could not start call. Please check microphone/camera permissions.');
     }
   },
@@ -1319,31 +1324,38 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       },
     });
 
+    // Open Active Call Window IMMEDIATELY on accept
+    set({
+      activeCall: {
+        callId,
+        peerNodeId: callerNodeId,
+        peerName: callerName,
+        callType,
+        status: 'ringing',
+        isMuted: false,
+        isCameraOff: false,
+        localStream: null,
+        remoteStream: null,
+        webrtcManager: manager,
+      },
+    });
+
     try {
       const localStream = await manager.getLocalStream(callType);
+      set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, localStream } } : {});
+
       const answerSdp = await manager.createAnswer(offerSdp, callType);
 
-      set({
-        activeCall: {
-          callId,
-          peerNodeId: callerNodeId,
-          peerName: callerName,
-          callType,
-          status: 'connected',
-          isMuted: false,
-          isCameraOff: false,
-          localStream,
-          remoteStream: null,
-          webrtcManager: manager,
-        },
-      });
+      set((prev) => prev.activeCall ? { activeCall: { ...prev.activeCall, status: 'connected' } } : {});
 
       if (sendPacketHandler) {
         sendPacketHandler(callerNodeId, JSON.stringify({ type: 'call_answer', callId, sdp: answerSdp }));
       }
     } catch (err: any) {
+      console.error('[WebRTC] acceptCall error:', err);
       manager.close();
-      alert('Could not accept call. Check media permissions.');
+      set({ activeCall: null });
+      alert('Could not accept call. Check camera/mic permissions.');
     }
   },
 
