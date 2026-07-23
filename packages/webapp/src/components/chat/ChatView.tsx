@@ -5,6 +5,7 @@ import { SafetyNumber } from '../common/SafetyNumber';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { GroupInfoDrawer } from '../group/GroupInfoDrawer';
+import { MeshQLogo } from '../common/MeshQLogo';
 
 function ShieldIcon() {
   return (
@@ -102,7 +103,7 @@ export function ChatView() {
           <div className="empty-state-icon-wrapper">
             <img src="/meshq-main-logo.png" alt="MeshQ Main Logo" className="empty-state-main-logo" />
           </div>
-          <img src="/meshq-text-logo.png" alt="MeshQ" className="empty-state-text-logo" />
+          <MeshQLogo size="lg" className="empty-state-brand-title" />
           <p className="empty-state-desc">
             Send and receive end-to-end encrypted peer-to-peer messages across the mesh network without internet tracking.
           </p>

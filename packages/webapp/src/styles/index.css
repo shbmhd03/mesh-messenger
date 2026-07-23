@@ -2993,6 +2993,54 @@ body {
   background: #EEF4FF !important;
 }
 
+/* ── MeshQ Pure Vector Wordmark Logo ────────────────────────────── */
+
+.meshq-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  user-select: none;
+}
+
+.meshq-brand-logo.size-sm {
+  font-size: 16px;
+}
+
+.meshq-brand-logo.size-md {
+  font-size: 22px;
+}
+
+.meshq-brand-logo.size-lg {
+  font-size: 34px;
+}
+
+.meshq-brand-logo .logo-word-mesh {
+  transition: color 150ms ease;
+}
+
+:root .meshq-brand-logo .logo-word-mesh,
+[data-theme="dark"] .meshq-brand-logo .logo-word-mesh {
+  color: #F7FAFF;
+}
+
+[data-theme="light"] .meshq-brand-logo .logo-word-mesh {
+  color: #011442;
+}
+
+.meshq-brand-logo .logo-letter-q {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-left: 0px;
+}
+
+.empty-state-brand-title {
+  margin-bottom: 14px;
+}
+
 
 
 

@@ -5,6 +5,7 @@ import { MeshStatus } from '../mesh/MeshStatus';
 import { formatTime } from '../../lib/demo';
 import { QRCodeModal } from '../qr/QRCodeModal';
 import { CreateGroupModal } from '../group/CreateGroupModal';
+import { MeshQLogo } from '../common/MeshQLogo';
 
 function SearchIcon() {
   return (
@@ -87,7 +88,7 @@ export function Sidebar() {
       <div className="sidebar-header">
         <div className="header-left-profile" onClick={() => setShowProfileDrawer(!showProfileDrawer)} title="Open Profile Settings">
           <Avatar initials={ownDisplayName.substring(0, 2).toUpperCase()} color="var(--accent)" size="sm" />
-          <img src="/meshq-text-logo.png" alt="MeshQ" className="header-logo-img" />
+          <MeshQLogo size="md" />
         </div>
 
         <div className="sidebar-header-actions">
