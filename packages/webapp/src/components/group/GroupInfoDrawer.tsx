@@ -1,5 +1,5 @@
 /**
- * GroupInfoDrawer — Slide-over drawer displaying group details, member roster, and Admin controls.
+ * GroupInfoDrawer: Slide-over drawer displaying group details, member roster, and Admin controls.
  */
 
 import React, { useState } from 'react';

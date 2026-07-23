@@ -10,7 +10,7 @@ interface SafetyNumberProps {
   contactName: string;
   /** Pre-computed safety number string (60 digits) */
   safetyNumber?: string;
-  /** Contact's NodeID (hex) — used to generate a deterministic pattern when no real safety number */
+  /** Contact's NodeID (hex): used to generate a deterministic pattern when no real safety number */
   nodeId: string;
   verified: boolean;
   onVerify?: () => void;

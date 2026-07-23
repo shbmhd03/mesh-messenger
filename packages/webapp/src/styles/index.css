@@ -1,6 +1,6 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- * MESH MESSENGER — Design System
+ * MESH MESSENGER: Design System
  * Dark-first, glassmorphism, premium feel
  * ═══════════════════════════════════════════════════════════════════════════
  */
@@ -37,7 +37,7 @@ body {
 /* ── Color Tokens ─────────────────────────────────────────────────────── */
 
 :root {
-  /* Base palette — deep space dark */
+  /* Base palette: deep space dark */
   --bg-base: #06060b;
   --bg-surface: #0c0c14;
   --bg-elevated: #111119;
@@ -51,7 +51,7 @@ body {
   --glass-hover: rgba(255, 255, 255, 0.03);
   --glass-blur: 24px;
 
-  /* Accent — electric indigo / violet */
+  /* Accent: electric indigo / violet */
   --accent-hue: 252;
   --accent: hsl(var(--accent-hue), 85%, 63%);
   --accent-hover: hsl(var(--accent-hue), 85%, 70%);
@@ -59,7 +59,7 @@ body {
   --accent-glow: hsla(var(--accent-hue), 85%, 63%, 0.25);
   --accent-gradient: linear-gradient(135deg, hsl(252, 85%, 63%), hsl(280, 80%, 60%), hsl(320, 75%, 55%));
 
-  /* Mesh network accent — cyan/teal for mesh visuals */
+  /* Mesh network accent: cyan/teal for mesh visuals */
   --mesh-hue: 175;
   --mesh: hsl(var(--mesh-hue), 75%, 50%);
   --mesh-soft: hsla(var(--mesh-hue), 75%, 50%, 0.12);

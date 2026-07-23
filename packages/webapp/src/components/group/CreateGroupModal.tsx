@@ -1,5 +1,5 @@
 /**
- * CreateGroupModal — Modal to create a new group chat and select initial members.
+ * CreateGroupModal: Modal to create a new group chat and select initial members.
  */
 
 import React, { useState } from 'react';

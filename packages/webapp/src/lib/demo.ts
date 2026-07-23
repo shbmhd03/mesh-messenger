@@ -122,7 +122,7 @@ export function generateDemoConversations(contacts: DemoContact[]): DemoConversa
       messages: [
         { id: 'm1', conversationId: 'conv1', text: 'Hey! Are you at the festival site?', sent: false, timestamp: now - 45 * minute, status: 'read' },
         { id: 'm2', conversationId: 'conv1', text: 'Yeah, just arrived. Setting up the node near the main stage', sent: true, timestamp: now - 42 * minute, status: 'read' },
-        { id: 'm3', conversationId: 'conv1', text: 'Perfect. I can see your node from here — 1 hop, strong signal', sent: false, timestamp: now - 40 * minute, status: 'read' },
+        { id: 'm3', conversationId: 'conv1', text: 'Perfect. I can see your node from here: 1 hop, strong signal', sent: false, timestamp: now - 40 * minute, status: 'read' },
         { id: 'm4', conversationId: 'conv1', text: 'I\'m seeing about 12 nodes in the mesh already. Pretty good coverage for setup day', sent: true, timestamp: now - 35 * minute, status: 'read' },
         { id: 'm5', conversationId: 'conv1', text: 'Nice! The BLE range is better than expected. I\'m getting 3-hop delivery to the parking area', sent: false, timestamp: now - 30 * minute, status: 'read' },
         { id: 'm6', conversationId: 'conv1', text: 'Let me check the relay bridge...', sent: true, timestamp: now - 25 * minute, status: 'delivered' },
@@ -140,7 +140,7 @@ export function generateDemoConversations(contacts: DemoContact[]): DemoConversa
       messages: [
         { id: 'm10', conversationId: 'conv2', text: 'I just verified your safety number via QR. We\'re confirmed E2EE ✅', sent: true, timestamp: now - 2 * hour, status: 'read' },
         { id: 'm11', conversationId: 'conv2', text: 'Verified on my end too. The double ratchet is working perfectly', sent: false, timestamp: now - 1.5 * hour, status: 'read' },
-        { id: 'm12', conversationId: 'conv2', text: 'I sent a test message through 4 hops — decrypted perfectly on your end?', sent: true, timestamp: now - hour, status: 'read' },
+        { id: 'm12', conversationId: 'conv2', text: 'I sent a test message through 4 hops: decrypted perfectly on your end?', sent: true, timestamp: now - hour, status: 'read' },
         { id: 'm13', conversationId: 'conv2', text: 'Yep, came through clean. The out-of-order handling with skipped message keys is working great', sent: false, timestamp: now - 50 * minute, status: 'read' },
         { id: 'm14', conversationId: 'conv2', text: 'Ratchet keys rotated successfully. Session is fresh', sent: false, timestamp: now - 15 * minute, status: 'read' },
       ],
@@ -161,14 +161,14 @@ export function generateDemoConversations(contacts: DemoContact[]): DemoConversa
     {
       id: 'conv4',
       contact: contacts[3],
-      lastMessage: 'Wi-Fi Direct throughput: 12 MB/s — way faster than BLE 🚀',
+      lastMessage: 'Wi-Fi Direct throughput: 12 MB/s (faster than BLE 🚀)',
       lastTime: now - 8 * minute,
       unread: 1,
       messages: [
         { id: 'm19', conversationId: 'conv4', text: 'Diego, I need to send you the updated firmware. It\'s 2MB', sent: true, timestamp: now - 20 * minute, status: 'read' },
         { id: 'm20', conversationId: 'conv4', text: 'BLE will fragment that into like 12,000 pieces. Let me upgrade us to Wi-Fi Direct', sent: false, timestamp: now - 18 * minute, status: 'read' },
         { id: 'm21', conversationId: 'conv4', text: 'Good call. Negotiating Wi-Fi Direct link over BLE...', sent: true, timestamp: now - 15 * minute, status: 'read' },
-        { id: 'm22', conversationId: 'conv4', text: 'Wi-Fi Direct throughput: 12 MB/s — way faster than BLE 🚀', sent: false, timestamp: now - 8 * minute, status: 'read' },
+        { id: 'm22', conversationId: 'conv4', text: 'Wi-Fi Direct throughput: 12 MB/s (faster than BLE 🚀)', sent: false, timestamp: now - 8 * minute, status: 'read' },
       ],
     },
     {
@@ -186,12 +186,12 @@ export function generateDemoConversations(contacts: DemoContact[]): DemoConversa
     {
       id: 'conv6',
       contact: contacts[5],
-      lastMessage: 'Message queued — 4 hops estimated when back online',
+      lastMessage: 'Message queued: 4 hops estimated when back online',
       lastTime: now - 6 * hour,
       unread: 0,
       messages: [
-        { id: 'm26', conversationId: 'conv6', text: 'Yuki, checking in — are you still at the mountain camp?', sent: true, timestamp: now - 8 * hour, status: 'sent' },
-        { id: 'm27', conversationId: 'conv6', text: 'Message queued — 4 hops estimated when back online', sent: true, timestamp: now - 6 * hour, status: 'pending' },
+        { id: 'm26', conversationId: 'conv6', text: 'Yuki, checking in: are you still at the mountain camp?', sent: true, timestamp: now - 8 * hour, status: 'sent' },
+        { id: 'm27', conversationId: 'conv6', text: 'Message queued: 4 hops estimated when back online', sent: true, timestamp: now - 6 * hour, status: 'pending' },
       ],
     },
     {
@@ -202,7 +202,7 @@ export function generateDemoConversations(contacts: DemoContact[]): DemoConversa
       unread: 0,
       messages: [
         { id: 'm28', conversationId: 'conv7', text: 'The relay server just bridged two mesh islands across continents', sent: false, timestamp: now - 2 * hour, status: 'read' },
-        { id: 'm29', conversationId: 'conv7', text: 'Sealed sender is working — the relay can\'t even see who sent it', sent: true, timestamp: now - 1.5 * hour, status: 'read' },
+        { id: 'm29', conversationId: 'conv7', text: 'Sealed sender is working: the relay cannot see who sent it', sent: true, timestamp: now - 1.5 * hour, status: 'read' },
         { id: 'm30', conversationId: 'conv7', text: 'Relay federation is the next big step', sent: false, timestamp: now - hour, status: 'read' },
       ],
     },

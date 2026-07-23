@@ -1,5 +1,5 @@
 /**
- * useRelay — React hook for managing the live relay WebSocket connection.
+ * useRelay: React hook for managing the live relay WebSocket connection.
  * Pipes incoming traffic directly into the Zustand state.
  */
 
@@ -93,7 +93,7 @@ export function useRelay() {
                 return;
               }
             } catch (jsonErr) {
-              // Not structured JSON — treat as plain text legacy packet
+              // Not structured JSON: treat as plain text legacy packet
             }
             addLiveMessage(fromNodeId, text, false);
           } catch (e) {

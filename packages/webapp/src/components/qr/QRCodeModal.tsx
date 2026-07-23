@@ -1,5 +1,5 @@
 /**
- * QRCodeModal — Displays owner's Node ID QR Code and provides camera / image file QR scanner.
+ * QRCodeModal: Displays owner's Node ID QR Code and provides camera / image file QR scanner.
  */
 
 import React, { useState, useEffect, useRef } from 'react';

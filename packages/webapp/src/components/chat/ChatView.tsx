@@ -171,8 +171,8 @@ export function ChatView() {
                   style={{ width: 6, height: 6 }}
                 />
                 {contact.online
-                  ? `online — ${contact.hopCount === 0 ? 'Direct' : `${contact.hopCount} hops`} (${contact.transport.toUpperCase()})`
-                  : 'offline — queued via Convex cloud'}
+                  ? `online - ${contact.hopCount === 0 ? 'Direct' : `${contact.hopCount} hops`} (${contact.transport.toUpperCase()})`
+                  : 'offline - queued via Convex cloud'}
               </>
             )}
           </div>
