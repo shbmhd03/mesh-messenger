@@ -1707,15 +1707,15 @@ body {
 }
 
 .stealth-toggle-pill.stealth-on {
-  background: rgba(255, 255, 255, 0.08);
-  color: #8696a0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.stealth-toggle-pill.stealth-off {
   background: rgba(0, 168, 132, 0.15);
   color: #00a884;
   border: 1px solid rgba(0, 168, 132, 0.3);
+}
+
+.stealth-toggle-pill.stealth-off {
+  background: rgba(255, 255, 255, 0.08);
+  color: #8696a0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .stealth-dot {
