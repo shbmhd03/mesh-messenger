@@ -102,22 +102,89 @@ function getDeterministicColor(nodeId: string): string {
   return colors[hash % colors.length];
 }
 
-// Generate random NodeID for the browser tab session
-const generateSessionNodeId = () => {
+// LocalStorage Persistence Keys
+const STORAGE_KEY_NODE_ID = 'mesh_own_node_id';
+const STORAGE_KEY_DISPLAY_NAME = 'mesh_own_display_name';
+const STORAGE_KEY_STEALTH_MODE = 'mesh_stealth_mode';
+const STORAGE_KEY_CONTACTS = 'mesh_contacts';
+const STORAGE_KEY_CONVERSATIONS = 'mesh_conversations';
+
+// Generate a hex NodeID
+const generateNodeId = () => {
   return Array.from({ length: 8 }, () => Math.floor(Math.random() * 16).toString(16))
     .join('')
     .toUpperCase();
 };
 
-const sessionNodeId = generateSessionNodeId();
+// Safe localStorage initial state loaders
+const getInitialNodeId = (): string => {
+  if (typeof window === 'undefined' || !window.localStorage) return generateNodeId();
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_NODE_ID);
+    if (saved && saved.trim().length >= 4) return saved.trim();
+    const newId = generateNodeId();
+    localStorage.setItem(STORAGE_KEY_NODE_ID, newId);
+    return newId;
+  } catch {
+    return generateNodeId();
+  }
+};
+
+const getInitialDisplayName = (nodeId: string): string => {
+  if (typeof window === 'undefined' || !window.localStorage) return `Node ${nodeId.substring(0, 8)}`;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_DISPLAY_NAME);
+    if (saved && saved.trim()) return saved.trim();
+  } catch {}
+  return `Node ${nodeId.substring(0, 8)}`;
+};
+
+const getInitialStealthMode = (): boolean => {
+  if (typeof window === 'undefined' || !window.localStorage) return false;
+  try {
+    return localStorage.getItem(STORAGE_KEY_STEALTH_MODE) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const getInitialContacts = (): Contact[] => {
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_CONTACTS);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+};
+
+const getInitialConversations = (): Conversation[] => {
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+};
+
+const initialNodeId = getInitialNodeId();
+const initialDisplayName = getInitialDisplayName(initialNodeId);
+const initialStealthMode = getInitialStealthMode();
+const initialContacts = getInitialContacts();
+const initialConversations = getInitialConversations();
 
 export const useMeshStore = create<MeshState>((set, get) => ({
-  ownNodeId: sessionNodeId,
-  ownDisplayName: `Node ${sessionNodeId.substring(0, 8)}`, // Default username
-  stealthMode: false, // Starts visible by default
+  ownNodeId: initialNodeId,
+  ownDisplayName: initialDisplayName,
+  stealthMode: initialStealthMode,
 
-  contacts: [],
-  conversations: [],
+  contacts: initialContacts,
+  conversations: initialConversations,
   activeConversationId: null,
   searchQuery: '',
 
@@ -131,7 +198,7 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   registerSendHandler: (handler) => set({ sendPacketHandler: handler }),
 
   // Action: updates own profile display name
-  setOwnDisplayName: (name) => set({ ownDisplayName: name.trim() || `Node ${sessionNodeId.substring(0, 8)}` }),
+  setOwnDisplayName: (name) => set({ ownDisplayName: name.trim() || `Node ${get().ownNodeId.substring(0, 8)}` }),
 
   // Action: toggle stealth/invisible mode connection status
   setStealthMode: (enabled) => set({ stealthMode: enabled }),
@@ -586,3 +653,18 @@ export const useMeshStore = create<MeshState>((set, get) => ({
     ),
   })),
 }));
+
+// Subscribe to automatically sync state changes to localStorage across tab reloads
+if (typeof window !== 'undefined' && window.localStorage) {
+  useMeshStore.subscribe((state) => {
+    try {
+      localStorage.setItem(STORAGE_KEY_NODE_ID, state.ownNodeId);
+      localStorage.setItem(STORAGE_KEY_DISPLAY_NAME, state.ownDisplayName);
+      localStorage.setItem(STORAGE_KEY_STEALTH_MODE, String(state.stealthMode));
+      localStorage.setItem(STORAGE_KEY_CONTACTS, JSON.stringify(state.contacts));
+      localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(state.conversations));
+    } catch {
+      // Ignore quota or private browsing errors silently
+    }
+  });
+}
